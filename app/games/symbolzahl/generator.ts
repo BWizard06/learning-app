@@ -22,10 +22,7 @@ export type SymbolId = (typeof SYMBOL_IDS)[number]
 
 export const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 
-export const LEGEND_SHUFFLE_FROM = 3
-
 const LEGEND_SALT = 0x9e3779b9
-const ORDER_SALT = 0x85ebca6b
 
 const SVG_HEAD =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">'
@@ -71,7 +68,6 @@ export interface SymbolzahlPayload {
   symbolId: SymbolId
   symbolSvg: string
   legend: LegendEntry[]
-  legendShuffled: boolean
 }
 
 export type SymbolzahlTrial = Trial<SymbolzahlPayload, number>
@@ -88,22 +84,8 @@ function digitOrderOf(legend: readonly number[]): number[] {
   return legend.map((_, index) => index).sort((a, b) => legend[a]! - legend[b]!)
 }
 
-function scrambledOrderOf(seed: number, digitOrder: readonly number[]): number[] {
-  const rng = saltedRng(seed, ORDER_SALT)
-  for (let attempt = 0; attempt < 12; attempt++) {
-    const candidate = rng.shuffle(digitOrder)
-    if (candidate.some((value, index) => value !== digitOrder[index])) return candidate
-  }
-  const fallback = digitOrder.slice()
-  const head = fallback[0]!
-  fallback[0] = fallback[1]!
-  fallback[1] = head
-  return fallback
-}
-
-export function legendOrderForSeed(seed: number, difficulty: number): number[] {
-  const digitOrder = digitOrderOf(legendForSeed(seed))
-  return difficulty >= LEGEND_SHUFFLE_FROM ? scrambledOrderOf(seed, digitOrder) : digitOrder
+export function legendOrderForSeed(seed: number): number[] {
+  return digitOrderOf(legendForSeed(seed))
 }
 
 export function probeWeight(id: SymbolId, difficulty: number): number {
@@ -114,8 +96,7 @@ export function probeWeight(id: SymbolId, difficulty: number): number {
 
 export function generateSymbolzahl(difficulty: number, rng: Rng): SymbolzahlTrial {
   const legend = legendForSeed(rng.seed)
-  const legendShuffled = difficulty >= LEGEND_SHUFFLE_FROM
-  const order = legendOrderForSeed(rng.seed, difficulty)
+  const order = legendOrderForSeed(rng.seed)
 
   const index = rng.pickIndex(SYMBOL_IDS.map((id) => probeWeight(id, difficulty)))
   const symbolId = SYMBOL_IDS[index]!
@@ -135,13 +116,11 @@ export function generateSymbolzahl(difficulty: number, rng: Rng): SymbolzahlTria
       digit,
       legend: legend.slice(),
       order: order.slice(),
-      legendShuffled,
     },
     payload: {
       symbolId,
       symbolSvg: symbolToSvg(symbolId),
       legend: entries,
-      legendShuffled,
     },
     answer: digit,
   }

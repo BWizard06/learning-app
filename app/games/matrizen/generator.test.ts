@@ -129,7 +129,7 @@ describe('matrizen generator', () => {
         expect(payload.cells).toHaveLength(8)
         for (const cell of payload.cells) expect(cell.startsWith('<svg')).toBe(true)
         expect(payload.question.length).toBeGreaterThan(0)
-        expect(payload.question).not.toContain('ß')
+        expect(payload.question).not.toContain('\u00df')
         expect(trial.options).toHaveLength(OPTION_COUNT)
         for (const option of trial.options!) expect(option.svg?.startsWith('<svg')).toBe(true)
         expect(trial.answer).toBe(trial.correctIndex)
@@ -242,6 +242,16 @@ describe('matrizen generator', () => {
       if (difficulty <= 3) expect(kinds).not.toContain('verteilung')
     }
     expect(seen.size).toBeGreaterThanOrEqual(4)
+  })
+
+  it('never mixes the two shapes that look alike when small', () => {
+    const runs = propertyRuns()
+    for (let i = 0; i < runs; i++) {
+      const trial = generateMatrix((i % 10) + 1, createRng(i * 6700417 + 29))
+      const parsed = parse(trial.params)
+      const shapes = new Set([...parsed.matrix, ...parsed.options].map((cell) => cell.shape))
+      expect(shapes.has('kreis') && shapes.has('sechseck')).toBe(false)
+    }
   })
 
   it('never leaves a feature outside its domain', () => {

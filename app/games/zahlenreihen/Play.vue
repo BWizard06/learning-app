@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { GameFinishPayload } from '~/composables/useGameSession'
-import type { SequencePayload } from './generator'
+import { negativesAllowed, type SequencePayload } from './generator'
 import definition from './definition'
 
 const props = defineProps<{ seed: number; difficulty: number; durationS?: number }>()
@@ -18,6 +18,7 @@ const { current, feedback } = engine
 useGameSession(engine, (payload) => emit('finish', payload))
 
 const entry = ref('')
+const negativeKey = ref(negativesAllowed(props.difficulty))
 
 const task = computed(() => (current.value?.payload ?? null) as SequencePayload | null)
 const locked = computed(() => feedback.value !== null)
@@ -28,6 +29,7 @@ const spoken = computed(() =>
 
 watch(current, () => {
   entry.value = ''
+  if (task.value?.allowNegative) negativeKey.value = true
 })
 
 function submit() {
@@ -71,7 +73,7 @@ onBeforeUnmount(() => engine.dispose())
 
       <NumberPad
         v-model="entry"
-        :allow-negative="task?.allowNegative ?? false"
+        :allow-negative="negativeKey"
         :disabled="locked"
         submit-label="Prüfen"
         @submit="submit"

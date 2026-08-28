@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, shallowRef } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, shallowRef } from 'vue'
 import { CONSTRUCT_LABELS, type SessionPayload } from '~~/shared/types'
 import type { GameFinishPayload } from '~/composables/useGameSession'
 import { gameBySlug } from '~/games'
@@ -97,6 +97,11 @@ async function onFinish(payload: GameFinishPayload) {
   await sync.submit(session)
 }
 
+const ready = ref(false)
+onMounted(() => {
+  ready.value = true
+})
+
 const accuracyText = computed(() =>
   result.value ? `${Math.round(result.value.accuracy * 100)} %` : '—',
 )
@@ -120,7 +125,9 @@ const accuracyText = computed(() =>
       </div>
     </dl>
 
-    <button type="button" class="intro__start tap" @click="begin">Starten</button>
+    <button type="button" class="intro__start tap" :disabled="!ready" @click="begin">
+      {{ ready ? 'Starten' : 'Einen Moment' }}
+    </button>
   </div>
 
   <ClientOnly v-else-if="phase === 'playing'">
@@ -162,7 +169,7 @@ const accuracyText = computed(() =>
     <SyncBanner />
 
     <div class="result__actions">
-      <button type="button" class="result__again tap" @click="begin">Nochmal</button>
+      <button type="button" class="result__again tap" :disabled="!ready" @click="begin">Nochmal</button>
       <NuxtLink to="/" class="result__home tap">Zur Übersicht</NuxtLink>
     </div>
   </div>
@@ -220,6 +227,11 @@ const accuracyText = computed(() =>
 
 .intro__start {
   margin-top: auto;
+}
+
+.intro__start:disabled,
+.result__again:disabled {
+  opacity: 0.55;
 }
 
 .intro__start,

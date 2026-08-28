@@ -7,17 +7,19 @@ import {
   CONFUSABILITY,
   DIGITS,
   ITEM_TYPES,
-  LEGEND_SHUFFLE_FROM,
   SYMBOL_IDS,
   generateSymbolzahl,
   legendForSeed,
   legendOrderForSeed,
+  probeWeight,
   symbolToSvg,
   type SymbolId,
   type SymbolzahlPayload,
 } from './generator'
 
 const ASCENDING = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+const POSITIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+const STAIRCASE_WALK = [1, 2, 3, 4, 3, 2, 1, 2, 3, 4, 4, 3, 2, 3, 4]
 
 function legendOf(trial: { params: Record<string, unknown> }): number[] {
   return trial.params.legend as number[]
@@ -136,6 +138,22 @@ describe('symbolzahl generator', () => {
     }
   })
 
+  it('records in params the display order it actually rendered', () => {
+    const runs = Math.min(propertyRuns(), 3000)
+    for (let i = 0; i < runs; i++) {
+      const seed = i * 2654435761 + 23
+      const trial = generateSymbolzahl((i % 4) + 1, createRng(seed))
+      const payload = payloadOf(trial)
+      const order = trial.params.order as number[]
+      const legend = legendOf(trial)
+
+      expect(order.slice().sort((a, b) => a - b)).toEqual(POSITIONS)
+      expect(payload.legend.map((entry) => entry.id)).toEqual(order.map((p) => SYMBOL_IDS[p]))
+      expect(payload.legend.map((entry) => entry.digit)).toEqual(order.map((p) => legend[p]))
+      expect(legend[SYMBOL_IDS.indexOf(trial.params.symbol as SymbolId)]).toBe(trial.params.digit)
+    }
+  })
+
   it('gives different seeds different legends often enough', () => {
     const seeds = 800
     const seen = new Set<string>()
@@ -169,24 +187,16 @@ describe('symbolzahl generator', () => {
 })
 
 describe('symbolzahl difficulty', () => {
-  it('shows the legend in digit order while it is easy and scrambles it later', () => {
+  it('shows the legend rows in digit order at every difficulty', () => {
     for (let i = 0; i < 300; i++) {
       const seed = i * 2654435761 + 9
-      const digitOrder = legendOrderForSeed(seed, 1)
+      const order = legendOrderForSeed(seed)
+      expect(order.slice().sort((a, b) => a - b)).toEqual(POSITIONS)
 
-      for (const difficulty of [1, 2]) {
+      for (const difficulty of [1, 2, 3, 4]) {
         const payload = payloadOf(generateSymbolzahl(difficulty, createRng(seed)))
-        expect(payload.legendShuffled).toBe(false)
         expect(payload.legend.map((entry) => entry.digit)).toEqual(ASCENDING)
-      }
-
-      for (const difficulty of [3, 4]) {
-        const payload = payloadOf(generateSymbolzahl(difficulty, createRng(seed)))
-        expect(payload.legendShuffled).toBe(true)
-        expect(payload.legend.map((entry) => entry.digit)).not.toEqual(ASCENDING)
-        const order = legendOrderForSeed(seed, difficulty)
-        expect(order.slice().sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8])
-        expect(order).not.toEqual(digitOrder)
+        expect(payload.legend.map((entry) => entry.id)).toEqual(order.map((p) => SYMBOL_IDS[p]))
       }
     }
   })
@@ -235,11 +245,30 @@ describe('symbolzahl difficulty', () => {
     }
   })
 
-  it('flips the legend order exactly at the documented step', () => {
-    expect(LEGEND_SHUFFLE_FROM).toBe(3)
-    const seed = 20260828
-    expect(payloadOf(generateSymbolzahl(LEGEND_SHUFFLE_FROM - 1, createRng(seed))).legendShuffled).toBe(false)
-    expect(payloadOf(generateSymbolzahl(LEGEND_SHUFFLE_FROM, createRng(seed))).legendShuffled).toBe(true)
+  it('never moves a legend row while the staircase walks up and down', () => {
+    for (const seed of [0, 1, 7, 4242, 99991, 2654435761]) {
+      const rng = createRng(seed)
+      const firstRows = payloadOf(generateSymbolzahl(1, rng)).legend.map((entry) => entry.id)
+      for (let i = 0; i < 600; i++) {
+        const difficulty = STAIRCASE_WALK[i % STAIRCASE_WALK.length]!
+        const payload = payloadOf(generateSymbolzahl(difficulty, rng))
+        expect(payload.legend.map((entry) => entry.id)).toEqual(firstRows)
+        expect(payload.legend.map((entry) => entry.digit)).toEqual(ASCENDING)
+      }
+    }
+  })
+
+  it('spans exactly the declared difficulty range', () => {
+    const [lo, hi] = definition.difficultyRange
+    expect([lo, hi]).toEqual([1, 4])
+    for (const id of SYMBOL_IDS) {
+      expect(probeWeight(id, hi + 1)).toBe(probeWeight(id, hi))
+      expect(probeWeight(id, lo - 1)).toBe(probeWeight(id, lo))
+    }
+    const atEasiest = [...SYMBOL_IDS].sort((a, b) => probeWeight(b, lo) - probeWeight(a, lo))
+    const atHardest = [...SYMBOL_IDS].sort((a, b) => probeWeight(b, hi) - probeWeight(a, hi))
+    expect(atEasiest).toEqual([...atHardest].reverse())
+    expect(CONFUSABILITY[atEasiest[0]!]!).toBeLessThan(CONFUSABILITY[atHardest[0]!]!)
   })
 })
 

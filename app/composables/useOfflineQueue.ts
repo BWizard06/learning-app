@@ -1,5 +1,5 @@
 import { openDB, type IDBPDatabase } from 'idb'
-import { classifyResponse, noteFromBody, type SyncVerdict } from '~~/shared/sync'
+import { classifyResponse, noteFromBody, toPlainPayload, type SyncVerdict } from '~~/shared/sync'
 import type { Note, SessionPayload } from '~~/shared/types'
 
 const DB_NAME = 'learning-app'
@@ -31,10 +31,11 @@ function database(): Promise<IDBPDatabase> {
 
 export async function enqueue(payload: SessionPayload): Promise<void> {
   const db = await database()
-  const existing = (await db.get(STORE, payload.id)) as OutboxEntry | undefined
+  const plain = toPlainPayload(payload)
+  const existing = (await db.get(STORE, plain.id)) as OutboxEntry | undefined
   await db.put(STORE, {
-    id: payload.id,
-    payload,
+    id: plain.id,
+    payload: plain,
     queuedAt: existing?.queuedAt ?? Date.now(),
     attempts: existing?.attempts ?? 0,
     lastError: existing?.lastError ?? null,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classifyResponse, isExpectedBody, looksLikeJson } from './sync'
+import { classifyResponse, isExpectedBody, looksLikeJson, toPlainPayload } from './sync'
 
 const ID = '01a04792-62ad-7167-9bd7-af474e9a2f37'
 const JSON_TYPE = 'application/json'
@@ -98,5 +98,35 @@ describe('classifyResponse, the rule that protects results', () => {
       const verdict = classifyResponse(res(status, type), body, ID)
       expect(verdict.removeFromOutbox, `status ${status} type ${type}`).toBe(false)
     }
+  })
+})
+
+describe('toPlainPayload, the guard against DataCloneError', () => {
+  it('turns a Vue reactive object into something IndexedDB can store', async () => {
+    const { reactive, ref } = await import('vue')
+
+    const reactivePayload = {
+      id: ID,
+      metrics: reactive({ attempted: 12, correct: 9 }),
+      trials: reactive([{ idx: 0, params: reactive({ type: 'x', a: 1 }), correct: true }]),
+      nested: ref(3),
+    }
+
+    expect(() => structuredClone(reactivePayload)).toThrow()
+    expect(() => structuredClone(toPlainPayload(reactivePayload))).not.toThrow()
+  })
+
+  it('keeps the data identical', () => {
+    const payload = {
+      id: ID,
+      metrics: { attempted: 12, correct: 9 },
+      trials: [{ idx: 0, params: { type: 'x', a: 1 }, correct: true, response: null }],
+    }
+    expect(toPlainPayload(payload)).toEqual(payload)
+  })
+
+  it('survives a round trip through structured clone unchanged', () => {
+    const payload = { id: ID, trials: [{ idx: 0, response: [1, 2, 3] }], metrics: {} }
+    expect(structuredClone(toPlainPayload(payload))).toEqual(payload)
   })
 })

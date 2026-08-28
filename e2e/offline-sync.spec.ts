@@ -7,19 +7,33 @@ test('a session finished offline is stored once the connection returns', async (
   await page.goto('/')
   const before = await storedSessions(page, SLUG)
 
+  await startGame(page, SLUG, '?dauer=5')
   await context.setOffline(true)
+
+  await waitForResult(page)
+
+  await expect(page.locator('.banner')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.banner')).toContainText('Übertragung')
+  expect(await storedSessions(page, SLUG).catch(() => before)).toBe(before)
+
+  await page.waitForTimeout(1500)
+  expect(await storedSessions(page, SLUG).catch(() => before)).toBe(before)
+
+  await context.setOffline(false)
+
+  await expect.poll(() => storedSessions(page, SLUG), { timeout: 30_000 }).toBe(before + 1)
+  await expect(page.locator('.banner')).toBeHidden({ timeout: 20_000 })
+})
+
+test('a session played online reaches the server without a banner', async ({ page }) => {
+  await page.goto('/')
+  const before = await storedSessions(page, SLUG)
 
   await startGame(page, SLUG, '?dauer=5')
   await waitForResult(page)
 
-  await expect(page.locator('.banner')).toBeVisible({ timeout: 15_000 })
-  expect(await storedSessions(page, SLUG).catch(() => before)).toBe(before)
-
-  await context.setOffline(false)
-  await page.locator('.banner').click()
-
-  await expect.poll(() => storedSessions(page, SLUG), { timeout: 20_000 }).toBe(before + 1)
-  await expect(page.locator('.banner')).toBeHidden({ timeout: 15_000 })
+  await expect.poll(() => storedSessions(page, SLUG), { timeout: 25_000 }).toBe(before + 1)
+  await expect(page.locator('.banner')).toBeHidden()
 })
 
 test('sending the same session twice stores it only once', async ({ page }) => {

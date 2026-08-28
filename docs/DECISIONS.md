@@ -91,3 +91,95 @@ gespeicherten Ergebnis durchspielen.
 Space Grotesk fuer Oberflaeche und Ueberschriften, JetBrains Mono mit Tabellenziffern fuer alle
 Zahlen, Timer und Ergebnisse. Beide unter SIL Open Font License, als variable woff2 lokal unter
 `public/fonts/`, zusammen rund 62 KB. Kein Google-Fonts-Abruf.
+
+---
+
+## Phase 2, Pruefungskern
+
+### Fuenf Spiele parallel gebaut, danach einzeln adversarisch geprueft
+
+`zahlenreihen`, `wortfluss`, `d2`, `matrizen` und `symbolzahl` entstanden gleichzeitig gegen den
+in `docs/GAME-CONTRACT.md` festgeschriebenen Vertrag, jedes in seinem eigenen Ordner. Kein Spiel
+darf `app/games/index.ts` oder irgendetwas ausserhalb seines Ordners anfassen; die Registrierung
+erfolgt zentral, und `app/games/catalog.test.ts` schlaegt fehl, sobald Ordner und Registrierung
+auseinanderlaufen.
+
+Anschliessend wurde jedes Spiel gegen den Vertrag geprueft, mit einer Kontrolle als wichtigstem
+Punkt: **testet der Test wirklich etwas, oder wiederholt er nur die Generatorlogik?** Ein Test,
+der dieselbe Formel nochmal rechnet, wuerde auch dann gruen bleiben, wenn die Formel falsch ist.
+Bei `zahlenreihen` liegt der Beleg in drei unabhaengig im Testfile nachgerechneten
+Mehrdeutigkeitspruefungen, bei `matrizen` in der Pruefung, dass die richtige Option jede Regel in
+Zeile und Spalte erfuellt und jeder Distraktor sich in genau einem Merkmal unterscheidet.
+
+### Ein `ß` im Wortfluss-Code ist kein Verstoss
+
+Die Schweizer Schreibweise gilt fuer die Texte, die die App **ausgibt**. Die Wortpruefung muss
+`ß` dagegen **annehmen**, weil «Straße» eine gueltige Eingabe ist. Der Test haelt beides fest:
+die Aufgabenstellung enthaelt kein `ß`, die Eingabepruefung akzeptiert es.
+
+### Radar erst ab drei Konstrukten
+
+Mit einer oder zwei Achsen ist ein Netzdiagramm entartet, es entsteht ein Strich mit einem Punkt.
+Darunter zeigt die Statistikseite stattdessen ein kompaktes Notenband pro Konstrukt, was ohnehin
+zum Leitmotiv passt.
+
+### Komponenten aus Unterordnern ohne Praefix
+
+Nuxt benennt `components/charts/NoteSparkline.vue` standardmaessig `<ChartsNoteSparkline>`. Die
+Diagramme rendern deshalb zuerst gar nicht, ohne Fehlermeldung. Statt die Namen zu verunstalten
+steht in `nuxt.config.ts` jetzt `components: [{ path: '~/components', pathPrefix: false }]`.
+
+---
+
+## Phase 3, PWA, Offline und Deployment-Artefakte
+
+### Der schwerwiegendste Fehler des Projekts bisher: DataCloneError
+
+Der End-to-End-Test hat aufgedeckt, was kein Unit-Test finden konnte:
+
+```
+DataCloneError: Failed to execute 'put' on 'IDBObjectStore': #<Object> could not be cloned.
+```
+
+Das Session-Objekt enthaelt Vue-Proxys, weil Ergebnisse und Kennwerte aus reaktivem State
+stammen. **IndexedDB kann Proxys nicht strukturiert klonen.** Die Folge waere gewesen: jedes
+Ergebnis scheitert beim Ablegen in die Outbox, und zwar in einem unbehandelten Promise, also
+lautlos. Genau der Datenverlust, gegen den die Outbox gebaut ist.
+
+Behoben mit `toPlainPayload`, das vor dem Schreiben durch `JSON.parse(JSON.stringify(...))` geht
+und damit exakt das erzeugt, was ohnehin ueber die Leitung geht. Der Regressionstest reproduziert
+den Fehler zuerst (`expect(() => structuredClone(reactivePayload)).toThrow()`) und zeigt dann,
+dass die bereinigte Fassung klonbar ist.
+
+**Was daraus folgt:** die Unit-Tests pruefen `classifyResponse` isoliert und sehr gruendlich, aber
+sie fassen IndexedDB nie an. Die Grenze zwischen reaktivem State und einer Speicher-API ist
+genau die Stelle, an der nur ein echter Browserlauf etwas findet.
+
+### Der Startknopf ist bis zum Mounten gesperrt
+
+Playwright klickte «Starten», bevor Nuxt hydriert hatte; der Klick verpuffte, ohne Fehler. Das
+ist kein reines Testproblem, sondern passiert auf einem langsamen Geraet auch einem Menschen: man
+tippt, nichts geschieht, man tippt nochmal. Der Knopf ist jetzt bis `onMounted` deaktiviert und
+beschriftet sich solange mit «Einen Moment».
+
+### Dev-Uebersteuerungen liegen in der Engine, nicht in jeder Play.vue
+
+`?dauer=<sekunden>` und `?items=<anzahl>` kuerzen einen Durchgang und greifen nur unter
+`import.meta.dev`. Sie werden in `useEngine` ausgewertet, nicht als Prop durchgereicht. Damit
+wirken sie fuer alle 22 Spiele einheitlich, auch fuer die noch nicht gebauten, und der
+Spielvertrag bleibt unveraendert. Ohne sie liesse sich ein Sprint weder von Hand noch von
+Playwright in vertretbarer Zeit bis zum gespeicherten Ergebnis durchspielen.
+
+### Der Offline-Test prueft den Weg, auf dem Daten verloren gehen koennen
+
+Der erste Entwurf lud die Seite offline und scheiterte am fehlenden Service Worker im
+Entwicklungsmodus. Der realistische und wichtigere Fall ist ein anderer: die App ist offen, die
+Verbindung bricht **waehrend** des Durchgangs weg. Genau das wird jetzt geprueft, samt der
+Bestaetigung, dass waehrend der Funkstille nichts beim Server ankommt und nach der Rueckkehr
+automatisch nachgetragen wird, ohne dass man etwas antippen muss.
+
+### Keine Backups, aber ein Exportweg
+
+Auf deinen Wunsch gibt es keinen Backup-Job, keine Rotation, kein Kopieren. `GET /api/export`
+bleibt als App-Funktion erhalten und liefert JSON sowie CSV je Tabelle, damit die Daten nie im
+Container gefangen sind.

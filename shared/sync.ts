@@ -1,3 +1,7 @@
+export function toPlainPayload<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
 export type SyncOutcome = 'stored' | 'duplicate' | 'rejected' | 'unauthenticated' | 'retry'
 
 export interface SyncVerdict {

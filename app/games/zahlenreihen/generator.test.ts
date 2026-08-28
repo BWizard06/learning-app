@@ -81,6 +81,122 @@ function geometricFits(terms: readonly number[]): boolean {
   return ratios.size === 1
 }
 
+function deltas(values: readonly number[]): number[] {
+  const out: number[] = []
+  for (let i = 1; i < values.length; i++) out.push(values[i]! - values[i - 1]!)
+  return out
+}
+
+function constantRun(values: readonly number[]): boolean {
+  return values.length > 0 && new Set(values).size === 1
+}
+
+function alternatingFit(terms: readonly number[]): number | null {
+  if (terms.length < 5) return null
+  const steps = deltas(terms)
+  for (let i = 0; i < steps.length; i++) {
+    if (steps[i]! !== (i % 2 === 0 ? steps[0]! : steps[1]!)) return null
+  }
+  return terms[terms.length - 1]! + (steps.length % 2 === 0 ? steps[0]! : steps[1]!)
+}
+
+function interleavedArithmetic(values: readonly number[]): boolean {
+  const even = values.filter((_, i) => i % 2 === 0)
+  const odd = values.filter((_, i) => i % 2 === 1)
+  if (even.length < 3 || odd.length < 3) return false
+  return constantRun(deltas(even)) && constantRun(deltas(odd))
+}
+
+function fibonacciShape(values: readonly number[]): boolean {
+  if (values.length < 3) return false
+  for (let i = 2; i < values.length; i++) {
+    if (values[i]! !== values[i - 1]! + values[i - 2]!) return false
+  }
+  return true
+}
+
+function affineRecurrence(values: readonly number[]): { factor: number; addend: number } | null {
+  if (values.length < 4) return null
+  const den = values[1]! - values[0]!
+  if (den === 0) return null
+  const factorNum = values[2]! - values[1]!
+  const addendNum = values[1]! * den - factorNum * values[0]!
+  for (let i = 0; i + 1 < values.length; i++) {
+    if (values[i + 1]! * den !== factorNum * values[i]! + addendNum) return null
+  }
+  if (factorNum % den !== 0 || addendNum % den !== 0) return null
+  return { factor: factorNum / den, addend: addendNum / den }
+}
+
+function multiplyAddShape(values: readonly number[]): boolean {
+  for (const multiplyFirst of [true, false]) {
+    let factor: number | null = null
+    let addend: number | null = null
+    let ok = true
+    for (let i = 0; i + 1 < values.length; i++) {
+      if ((i % 2 === 0) === multiplyFirst) {
+        if (values[i]! === 0 || values[i + 1]! % values[i]! !== 0) {
+          ok = false
+          break
+        }
+        const seen = values[i + 1]! / values[i]!
+        if (factor === null) factor = seen
+        else if (factor !== seen) {
+          ok = false
+          break
+        }
+      } else {
+        const seen = values[i + 1]! - values[i]!
+        if (addend === null) addend = seen
+        else if (addend !== seen) {
+          ok = false
+          break
+        }
+      }
+    }
+    if (ok && factor !== null && addend !== null && factor >= 2 && addend !== 0) return true
+  }
+  return false
+}
+
+function consecutivePowersPlusOffset(values: readonly number[], exponent: number): boolean {
+  for (let from = 0; from <= 60; from++) {
+    const offset = values[0]! - from ** exponent
+    if (values.every((value, i) => value - offset === (from + i) ** exponent)) return true
+  }
+  return false
+}
+
+function consecutivePrimesPlusOffset(values: readonly number[]): boolean {
+  for (let k = 0; k + values.length <= PRIMES.length; k++) {
+    const offset = values[0]! - PRIMES[k]!
+    if (values.every((value, i) => value - offset === PRIMES[k + i]!)) return true
+  }
+  return false
+}
+
+const STRUCTURE: Record<ItemType, (values: number[]) => boolean> = {
+  'konstante-differenz': (values) => constantRun(deltas(values)),
+  'konstanter-faktor': (values) => geometricFits(values),
+  'alternierende-schritte': (values) => {
+    const steps = deltas(values)
+    return alternatingFit(values) !== null && steps[0]! !== steps[1]!
+  },
+  'zweite-differenz': (values) => constantRun(deltas(deltas(values))),
+  'differenzreihe': (values) =>
+    constantRun(deltas(deltas(values))) && deltas(values)[0] === deltas(deltas(values))[0],
+  'verschachtelt': (values) => interleavedArithmetic(values),
+  'fibonacci-artig': (values) => fibonacciShape(values),
+  'quadratzahlen-versatz': (values) => consecutivePowersPlusOffset(values, 2),
+  'kubikzahlen-versatz': (values) => consecutivePowersPlusOffset(values, 3),
+  'mult-add-wechsel': (values) => multiplyAddShape(values),
+  'mult-plus-konstante': (values) => {
+    const fit = affineRecurrence(values)
+    return fit !== null && fit.factor >= 2 && fit.addend !== 0
+  },
+  'primzahl-versatz': (values) => consecutivePrimesPlusOffset(values),
+}
+
 function secondDifferenceFit(terms: readonly number[]): number | null {
   if (terms.length < 5) return null
   const steps: number[] = []
@@ -110,18 +226,19 @@ function rebuild(trial: SequenceTrial): number[] {
       return values
 
     case 'alternierende-schritte':
-      values.push(p.start!)
-      for (let i = 0; i < shown; i++) values.push(values[i]! + (i % 2 === 0 ? p.stepA! : p.stepB!))
+      for (let i = 0; i <= shown; i++) {
+        values.push(p.start! + Math.ceil(i / 2) * p.stepA! + Math.floor(i / 2) * p.stepB!)
+      }
       return values
 
     case 'zweite-differenz':
-      values.push(p.start!)
-      for (let i = 0; i < shown; i++) values.push(values[i]! + p.firstStep! + i * p.increment!)
+      for (let i = 0; i <= shown; i++) {
+        values.push(p.start! + i * p.firstStep! + (p.increment! * i * (i - 1)) / 2)
+      }
       return values
 
     case 'differenzreihe':
-      values.push(p.start!)
-      for (let i = 0; i < shown; i++) values.push(values[i]! + p.unit! * (i + 1))
+      for (let i = 0; i <= shown; i++) values.push(p.start! + (p.unit! * i * (i + 1)) / 2)
       return values
 
     case 'verschachtelt':
@@ -228,6 +345,34 @@ describe('zahlenreihen generator', () => {
       const predicted = secondDifferenceFit(payloadOf(trial).terms)
       if (predicted !== null) expect(predicted).toBe(trial.answer)
     }
+  })
+
+  it('never shows terms where two alternating steps point elsewhere', () => {
+    const runs = propertyRuns()
+    for (let i = 0; i < runs; i++) {
+      const difficulty = (i % 12) + 1
+      const trial = generateSequence(difficulty, createRng(i * 2971215073 + 29))
+      const predicted = alternatingFit(payloadOf(trial).terms)
+      if (predicted !== null) {
+        expect(predicted, `alternating fit on ${payloadOf(trial).terms.join(', ')}`).toBe(
+          trial.answer,
+        )
+      }
+    }
+  })
+
+  it('matches the structure its own item type promises without reading the parameters', () => {
+    const runs = propertyRuns()
+    const seen = new Set<ItemType>()
+    for (let i = 0; i < runs; i++) {
+      const difficulty = (i % 12) + 1
+      const trial = generateSequence(difficulty, createRng(i * 1103515245 + 31))
+      const itemType = trial.itemType as ItemType
+      const values = [...payloadOf(trial).terms, trial.answer]
+      seen.add(itemType)
+      expect(STRUCTURE[itemType](values), `${itemType} on ${values.join(', ')}`).toBe(true)
+    }
+    expect([...seen].sort()).toEqual([...ITEM_TYPES].sort())
   })
 
   it('reproduces the shown terms and the answer from the stated rule', () => {

@@ -4,7 +4,7 @@ import type { ChoiceOption, JsonObject, Trial } from '~~/shared/types'
 export const SHAPES = ['kreis', 'quadrat', 'dreieck', 'raute', 'sechseck'] as const
 export const COUNTS = [1, 2, 3, 4, 5] as const
 export const FILLS = ['leer', 'halb', 'voll'] as const
-export const ROTATIONS = [0, 45, 90, 135] as const
+export const ROTATIONS = [0, 30, 60, 90] as const
 export const SIZES = ['klein', 'mittel', 'gross'] as const
 
 export type ShapeName = (typeof SHAPES)[number]
@@ -68,7 +68,7 @@ export const OPTION_COUNT = DISTRACTOR_COUNT + 1
 
 const QUESTION = 'Welche Figur vervollständigt die Matrix?'
 
-const ROTATION_SHAPES: ShapeName[] = ['dreieck', 'sechseck']
+const ROTATION_SHAPES: ShapeName[] = ['dreieck', 'raute']
 
 const ALLOWED_RULES: Record<FeatureKey, RuleKind[]> = {
   shape: ['konstant-in-zeile', 'verteilung'],
@@ -80,17 +80,19 @@ const ALLOWED_RULES: Record<FeatureKey, RuleKind[]> = {
 
 const POSITIONS: readonly (readonly (readonly [number, number])[])[] = [
   [[50, 50]],
-  [[28, 50], [72, 50]],
-  [[50, 27], [29, 68], [71, 68]],
-  [[29, 29], [71, 29], [29, 71], [71, 71]],
-  [[26, 26], [74, 26], [50, 50], [26, 74], [74, 74]],
+  [[27, 50], [73, 50]],
+  [[50, 25], [27, 71], [73, 71]],
+  [[27, 27], [73, 27], [27, 73], [73, 73]],
+  [[22, 22], [78, 22], [50, 50], [22, 78], [78, 78]],
 ]
 
-const RADII: Record<SizeName, readonly number[]> = {
-  klein: [18, 11, 10, 10, 8],
-  mittel: [25, 15, 14, 13, 10],
-  gross: [32, 19, 17, 17, 13],
+const RADII: Record<SizeName, number> = {
+  klein: 10,
+  mittel: 13.5,
+  gross: 17.5,
 }
+
+const CONFUSABLE_SHAPES: ShapeName[] = ['kreis', 'sechseck']
 
 const FILL_ATTRS: Record<FillName, string> = {
   leer: 'fill="none"',
@@ -153,7 +155,7 @@ function shapeMarkup(shape: ShapeName, radius: number): string {
 }
 
 function strokeFor(radius: number): number {
-  if (radius >= 18) return 3
+  if (radius >= 16) return 3
   if (radius >= 12) return 2.5
   return 2
 }
@@ -171,7 +173,7 @@ export function describeCell(features: CellFeatures): string {
 
 export function cellToSvg(features: CellFeatures): string {
   const positions = POSITIONS[features.count - 1]!
-  const radius = RADII[features.size]![features.count - 1]!
+  const radius = RADII[features.size]
   const body = positions
     .map(
       ([x, y]) =>
@@ -274,14 +276,22 @@ function pickRule(rng: Rng, feature: FeatureKey, allowVerteilung: boolean): Rule
   return buildRule(rng, feature, rng.pick(kinds))
 }
 
+function valuePool(rng: Rng, feature: FeatureKey): number[] {
+  const all = indices(DOMAIN_SIZE[feature])
+  if (feature !== 'shape') return all
+  const dropped = SHAPES.indexOf(rng.pick(CONFUSABLE_SHAPES))
+  return all.filter((index) => index !== dropped)
+}
+
 function buildRule(rng: Rng, feature: FeatureKey, kind: RuleKind): Rule {
   const size = DOMAIN_SIZE[feature]
   if (kind === 'progression') return pickProgression(rng, feature, 2)
   if (kind === 'verteilung') {
-    return { kind: 'verteilung', values: rng.sample(indices(size), 3), rowShift: rng.pick([1, 2]) }
+    const pool = valuePool(rng, feature)
+    return { kind: 'verteilung', values: rng.sample(pool, 3), rowShift: rng.pick([1, 2]) }
   }
   if (kind === 'konstant-in-zeile') {
-    return { kind: 'konstant-in-zeile', rows: rng.sample(indices(size), 3) }
+    return { kind: 'konstant-in-zeile', rows: rng.sample(valuePool(rng, feature), 3) }
   }
   return { kind: 'konstant', value: rng.int(0, size - 1) }
 }

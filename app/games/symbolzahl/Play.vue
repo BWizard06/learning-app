@@ -37,7 +37,7 @@ function answer(digit: number) {
 }
 
 function onKeydown(event: KeyboardEvent) {
-  if (event.metaKey || event.ctrlKey || event.altKey) return
+  if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
   const digit = Number.parseInt(event.key, 10)
   if (!Number.isFinite(digit) || digit < 1 || digit > 9) return
   answer(digit)
@@ -104,6 +104,8 @@ onBeforeUnmount(() => {
           @click="answer(digit)"
         >
           {{ digit }}
+          <span v-if="keyState(digit) === 'correct'" class="keys__mark" aria-label="richtig">✓</span>
+          <span v-else-if="keyState(digit) === 'wrong'" class="keys__mark" aria-label="falsch">✗</span>
         </button>
       </div>
     </div>
@@ -241,6 +243,7 @@ onBeforeUnmount(() => {
 }
 
 .keys__key {
+  position: relative;
   min-height: 3.5rem;
   display: flex;
   align-items: center;
@@ -266,6 +269,15 @@ onBeforeUnmount(() => {
 
 .keys__key:disabled.is-idle {
   opacity: 0.45;
+}
+
+.keys__mark {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.4375rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .keys__key.is-correct {
