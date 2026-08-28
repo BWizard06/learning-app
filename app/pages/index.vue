@@ -19,6 +19,7 @@ const grouped = computed(() =>
     <header class="home__head">
       <p class="eyebrow">Kognitives Training</p>
       <h1 class="home__title">Was übst du heute?</h1>
+      <NuxtLink to="/stats" class="home__stats tap">Statistik</NuxtLink>
     </header>
 
     <section v-for="group in grouped" :key="group.construct" class="home__group">
@@ -44,9 +45,27 @@ const grouped = computed(() =>
   gap: 2rem;
 }
 
+.home__head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+}
+
 .home__title {
-  margin-top: 0.375rem;
   font-size: 1.75rem;
+}
+
+.home__stats {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  color: var(--ink);
+  text-decoration: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-key);
 }
 
 .home__group {

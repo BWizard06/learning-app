@@ -137,6 +137,16 @@ export const CONSTRUCT_LABELS: Record<Construct, string> = {
   text: 'Textverständnis',
 }
 
+export const CONSTRUCT_SHORT_LABELS: Record<Construct, string> = {
+  rechnen: 'Rechnen',
+  logik: 'Logik',
+  sprache: 'Sprache',
+  wortfluss: 'Wortfluss',
+  konzentration: 'Konzentration',
+  gedaechtnis: 'Gedächtnis',
+  text: 'Text',
+}
+
 export const EXAM_CONSTRUCTS: Construct[] = [
   'rechnen',
   'logik',

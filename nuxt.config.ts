@@ -7,6 +7,8 @@ export default defineNuxtConfig({
 
   modules: ['@pinia/nuxt', '@vite-pwa/nuxt'],
 
+  components: [{ path: '~/components', pathPrefix: false }],
+
   css: ['~/assets/css/tokens.css', '~/assets/css/base.css'],
 
   vite: {
