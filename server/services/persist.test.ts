@@ -4,6 +4,7 @@ import { createTestDb } from '../db/client'
 import { dayLog, sessions, trials } from '../db/schema'
 import { saveSession } from './persist'
 import { rebuildDayLog } from './daylog'
+import { readAllDifficulties, readDifficulty } from './settings'
 import type { SessionPayload } from '../../shared/types'
 
 function payload(overrides: Partial<SessionPayload> = {}): SessionPayload {
@@ -161,5 +162,36 @@ describe('day log', () => {
     const days = rebuildDayLog(db)
     expect(days).toBe(2)
     expect(db.select().from(dayLog).all()).toEqual(before)
+  })
+})
+
+describe('difficulty persistence', () => {
+  it('remembers the settled difficulty per game', () => {
+    saveSession(db, payload({ id: 'd1', difficulty: 6.25 }))
+    expect(readDifficulty(db, 'kopfrechnen', 1)).toBe(6.25)
+  })
+
+  it('keeps games apart', () => {
+    saveSession(db, payload({ id: 'd1', gameSlug: 'kopfrechnen', difficulty: 3 }))
+    saveSession(db, payload({ id: 'd2', gameSlug: 'zahlenreihen', difficulty: 9 }))
+    expect(readDifficulty(db, 'kopfrechnen', 1)).toBe(3)
+    expect(readDifficulty(db, 'zahlenreihen', 1)).toBe(9)
+  })
+
+  it('overwrites with the newest value rather than accumulating', () => {
+    saveSession(db, payload({ id: 'd1', difficulty: 3 }))
+    saveSession(db, payload({ id: 'd2', difficulty: 7 }))
+    expect(readDifficulty(db, 'kopfrechnen', 1)).toBe(7)
+    expect(Object.keys(readAllDifficulties(db))).toEqual(['kopfrechnen'])
+  })
+
+  it('falls back when a game was never played', () => {
+    expect(readDifficulty(db, 'nie-gespielt', 4)).toBe(4)
+  })
+
+  it('does not record a difficulty for a duplicate send', () => {
+    saveSession(db, payload({ id: 'same', difficulty: 5 }))
+    saveSession(db, payload({ id: 'same', difficulty: 11 }))
+    expect(readDifficulty(db, 'kopfrechnen', 1)).toBe(5)
   })
 })

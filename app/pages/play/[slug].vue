@@ -65,9 +65,9 @@ const modeText = computed(() => {
   }
 })
 
-function begin() {
+async function begin() {
   seed.value = randomSeed()
-  startDifficulty.value = readDifficulty(slug.value, definition.value!.difficultyRange[0])
+  startDifficulty.value = await readDifficulty(slug.value, definition.value!.difficultyRange[0])
   result.value = null
   phase.value = 'playing'
 }
