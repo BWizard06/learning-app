@@ -106,6 +106,14 @@ auf einen anderen naechsten Wert zeigt. Dazu kommt eine Mindestanzahl gezeigter 
 **Punkteberechnung** gewichteter Durchsatz. Kennwerte: `attempted`, `correct`, `medianRtMs`,
 `meanDifficulty`.
 
+**Offene Punkte, ehrlich benannt.** Drei der zwoelf Gesetze (`zweite-differenz`,
+`differenzreihe`, `quadratzahlen-versatz`) sind mathematisch dieselbe Regel, naemlich eine
+konstante zweite Differenz; sie unterscheiden sich nur in der Bauart, nicht im Denkschritt. Fuer
+die Schwachstellenanalyse sind das trotzdem drei getrennte Eintraege, was den Befund verwaessern
+kann. Ausserdem sind die zwoelf Schwierigkeitsstufen in vier Stufengruppen organisiert, also gibt
+es real vier Niveaus statt zwoelf. Beides ist eine Inhaltsentscheidung, keine Fehlfunktion, und
+bleibt fuer eine spaetere Ueberarbeitung notiert.
+
 ---
 
 ## wortfluss, Wortflüssigkeit
@@ -116,9 +124,20 @@ auf einen anderen naechsten Wert zeigt. Dazu kommt eine Mindestanzahl gezeigter 
 **Gewicht** linear von 1.0 auf 1.6
 **Schwellen** `raw1: 2`, `raw4: 11`, `raw6: 22`
 
-**Drei Aufgabenformen**, an die Schwierigkeit gekoppelt: `buchstabe` (alle Woerter mit einem
-vorgegebenen Anfangsbuchstaben), `kategorie` (alle Woerter aus einer Kategorie), `kombiniert`
-(Kategorie und Anfangsbuchstabe zugleich).
+**Drei Aufgabenformen**: `buchstabe` (alle Woerter mit einem vorgegebenen Anfangsbuchstaben),
+`kategorie` (alle Woerter aus einer Kategorie), `kombiniert` (Kategorie und Anfangsbuchstabe
+zugleich). Welche Form drankommt, **rotiert ueber den Session-Seed**, nicht ueber die
+Schwierigkeit.
+
+**Warum das korrigiert wurde:** urspruenglich waren die drei Formen als Schwierigkeitsstufen 1,
+2 und 3 definiert. Das war ein Denkfehler: es sind drei verschiedene Aufgabenformen, keine
+Steigerung. Schlimmer noch, es machte zwei davon zu totem Inhalt, weil dieses Spiel pro Session
+nur eine einzige Aufgabenstellung hat, die Staircase deshalb nie greift und die gespeicherte
+Schwierigkeit auf 1 stehen blieb. `kategorie` und `kombiniert` waeren nie erschienen. Jetzt
+kommen alle drei ab der ersten Session vor, und ein Test prueft genau das.
+
+**Die Schwierigkeit wirkt jetzt innerhalb der Form**: auf Stufe 1 kommen nur haeufige
+Anfangsbuchstaben, ab Stufe 2 der volle Vorrat inklusive der duennen.
 
 **Eingabe** das einzige Spiel mit einem echten Textfeld statt Ziffernblock. Schriftgroesse
 mindestens 16 px, damit iOS nicht zoomt, Autokorrektur und Autokapitalisierung aus.
@@ -167,7 +186,11 @@ Scrollen.
 `schwankungsbreite` als Spanne zwischen schnellster und langsamster Zeile. Genau die
 Schwankungsbreite ist das, was Konzentration von blossem Tempo unterscheidet.
 
-**Punkteberechnung** Treffer minus Fehler pro Minute, gewichtet, nach unten bei null begrenzt.
+**Punkteberechnung, bewusste Ausnahme von der allgemeinen Formel:** Treffer minus Fehler pro
+Minute, gewichtet, nach unten bei null begrenzt. Die Hausregel «nur korrekt geloeste Items
+zaehlen, Fehler kosten nur Zeit» passt hier nicht, weil bei einem Durchstreichtest das
+Uebersehen und das faelschliche Markieren die eigentliche Messgroesse sind. Ein Durchgang, bei
+dem man einfach alles markiert, muss schlechter abschneiden als einer mit sorgfaeltiger Auswahl.
 
 ---
 
@@ -188,8 +211,10 @@ muss aber innerhalb einer Session unveraendert bleiben. Sie wird deshalb aus `rn
 und nicht aus `rng.next()`, denn dessen Zustand wandert von Item zu Item weiter. Ein Test ruft
 `generate` viele Male mit demselben Rng auf und prueft, dass die Permutation sich nie aendert.
 
-**Schwierigkeitsachse** wie aehnlich sich die verwendeten Zeichen sehen, und ob die Legende in
-Ziffernreihenfolge steht oder gemischt ist.
+**Schwierigkeitsachse** wie aehnlich sich die verwendeten Zeichen sehen. Die urspruenglich
+zusaetzlich vorgesehene Achse «Legende in Ziffernreihenfolge oder gemischt» wurde wieder
+entfernt: sie haette die Legendenreihenfolge an die Schwierigkeit gekoppelt, die sich waehrend
+einer Session aendert, und damit die Tabelle mitten im Durchgang umsortiert.
 
 **Punkteberechnung** richtige Zuordnungen pro Minute, gewichtet. Kennwerte: `attempted`,
 `correct`, `medianRtMs`, `meanRtMs`.

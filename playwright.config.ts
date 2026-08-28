@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const PORT = 3210
-const BASE_URL = `http://127.0.0.1:${PORT}`
+const BASE_URL = `http://localhost:${PORT}`
 
 export default defineConfig({
   testDir: './e2e',
@@ -19,7 +19,7 @@ export default defineConfig({
   },
   projects: [{ name: 'mobile', use: { ...devices['Pixel 7'] } }],
   webServer: {
-    command: `npm run dev -- --port ${PORT}`,
+    command: `npm run dev -- --port ${PORT} --host 127.0.0.1`,
     url: BASE_URL,
     reuseExistingServer: true,
     timeout: 180_000,

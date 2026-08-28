@@ -32,6 +32,9 @@ app/games/<slug>/
    eigene `NumberPad`, nie die Systemtastatur. Schriftgroesse in Eingabefeldern mindestens 16 px.
 7. **Farbe ist nie der einzige Bedeutungstraeger.** Richtig und falsch bekommen zusaetzlich ein
    Zeichen.
+7a. **Genau eine Statusmeldung pro Spiel.** Die Rueckmeldung steht in einem sichtbaren Element
+   mit `role="status"`, das das Spiel selbst rendert. `GameFrame` liefert bewusst keine zweite,
+   versteckte Meldung, sonst liest ein Screenreader alles doppelt vor.
 8. `prefers-reduced-motion` respektieren, Tastaturbedienung am Desktop moeglich.
 
 ## Typen

@@ -30,6 +30,10 @@ watch(current, () => {
   chosen.value = null
 })
 
+function spotOf(index: number) {
+  return `Zeile ${Math.floor(index / 3) + 1}, Spalte ${(index % 3) + 1}`
+}
+
 function choose(index: number) {
   if (locked.value) return
   chosen.value = index
@@ -45,11 +49,14 @@ onBeforeUnmount(() => engine.dispose())
     <div class="run">
       <p class="eyebrow run__eyebrow">{{ task?.question ?? '' }}</p>
 
-      <div v-if="task" class="run__matrix card">
-        <div v-for="(cell, index) in task.cells" :key="index" class="run__cell" v-html="cell" />
+      <div v-if="task" class="run__matrix card" role="group" aria-label="Matrix mit drei mal drei Feldern">
+        <div v-for="(cell, index) in task.cells" :key="index" class="run__cell">
+          <span class="sr-only">{{ spotOf(index) }}</span>
+          <span class="run__figure" v-html="cell" />
+        </div>
         <div class="run__cell run__cell--open">
           <span class="num run__ask" aria-hidden="true">?</span>
-          <span class="sr-only">Feld gesucht</span>
+          <span class="sr-only">{{ spotOf(8) }}, gesuchtes Feld</span>
         </div>
       </div>
 
@@ -101,6 +108,14 @@ onBeforeUnmount(() => engine.dispose())
   padding: 0.5rem;
   color: var(--ink);
   background-color: var(--raised);
+}
+
+.run__figure {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
 }
 
 .run__cell :deep(svg) {

@@ -89,6 +89,7 @@ export interface GameDefinition<TPayload = any, TAnswer = any> {
   itemCount?: number
   difficultyRange: [number, number]
   thresholds: NoteThresholds
+  scoresCorrectness?: boolean
   weight(difficulty: number): number
   generate(difficulty: number, rng: Rng): Trial<TPayload, TAnswer> | TrialBlock<TPayload, TAnswer>
   score(trials: TrialResult[], durationS: number): RawScore

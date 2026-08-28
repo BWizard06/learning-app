@@ -10,7 +10,9 @@ import {
   LETTERS,
   MIN_WORD_LENGTH,
   generateWortfluss,
-  itemTypeFor,
+  itemTypeForSeed,
+  lettersFor,
+  COMMON_LETTERS,
   validateWord,
   type ItemType,
   type WortflussPayload,
@@ -29,27 +31,56 @@ describe('wortfluss generator', () => {
     })
   })
 
-  it('names one fixed prompt kind per level', () => {
-    expect(itemTypeFor(1)).toBe('buchstabe')
-    expect(itemTypeFor(2)).toBe('kategorie')
-    expect(itemTypeFor(3)).toBe('kombiniert')
-    expect(itemTypeFor(-4)).toBe('buchstabe')
-    expect(itemTypeFor(12)).toBe('kombiniert')
+  it('rotates the prompt kind by session seed, not by difficulty', () => {
+    expect(itemTypeForSeed(0)).toBe('buchstabe')
+    expect(itemTypeForSeed(1)).toBe('kategorie')
+    expect(itemTypeForSeed(2)).toBe('kombiniert')
+    expect(itemTypeForSeed(3)).toBe('buchstabe')
   })
 
-  it('maps every difficulty to its prompt kind', () => {
-    const runs = propertyRuns()
-    const expected: ItemType[] = ['buchstabe', 'kategorie', 'kombiniert']
+  it('reaches all three prompt kinds at the lowest difficulty, so none is dead content', () => {
     const seen = new Set<ItemType>()
-    for (let i = 0; i < runs; i++) {
-      const difficulty = (i % 3) + 1
-      const trial = generateWortfluss(difficulty, createRng(i * 2654435761 + 11))
-      seen.add(trial.itemType as ItemType)
-      expect(trial.itemType).toBe(expected[difficulty - 1])
-      expect(trial.params.type).toBe(trial.itemType)
-      expect(trial.difficulty).toBe(difficulty)
+    for (let i = 0; i < 300; i++) {
+      seen.add(generateWortfluss(1, createRng(i)).itemType as ItemType)
     }
     expect(seen).toEqual(new Set(ITEM_TYPES))
+  })
+
+  it('reaches all three prompt kinds at every difficulty', () => {
+    for (const difficulty of [1, 2, 3]) {
+      const seen = new Set<ItemType>()
+      for (let i = 0; i < 300; i++) {
+        seen.add(generateWortfluss(difficulty, createRng(i * 7 + 1)).itemType as ItemType)
+      }
+      expect(seen, `difficulty ${difficulty}`).toEqual(new Set(ITEM_TYPES))
+    }
+  })
+
+  it('keeps the prompt kind stable for a whole session', () => {
+    for (let seed = 0; seed < 200; seed++) {
+      const rng = createRng(seed)
+      const first = generateWortfluss(2, rng).itemType
+      for (let i = 0; i < 10; i++) {
+        expect(generateWortfluss(2, rng).itemType).toBe(first)
+      }
+    }
+  })
+
+  it('restricts the letter pool to common letters at the lowest difficulty', () => {
+    expect(lettersFor(1)).toEqual(COMMON_LETTERS)
+    expect(lettersFor(2).length).toBeGreaterThan(COMMON_LETTERS.length)
+
+    for (let i = 0; i < 600; i++) {
+      const trial = generateWortfluss(1, createRng(i * 31 + 5))
+      const letter = (trial.params as { letter: string | null }).letter
+      if (letter !== null) expect(COMMON_LETTERS).toContain(letter)
+    }
+  })
+
+  it('records the difficulty it was asked for', () => {
+    for (const difficulty of [1, 2, 3]) {
+      expect(generateWortfluss(difficulty, createRng(42)).difficulty).toBe(difficulty)
+    }
   })
 
   it('rebuilds the exact prompt from the parameters alone', () => {
@@ -59,11 +90,11 @@ describe('wortfluss generator', () => {
       const payload = trial.payload as WortflussPayload
       const params = trial.params as {
         type: ItemType
-        letterIndex: number | null
-        categoryIndex: number | null
+        letter: string | null
+        category: string | null
       }
-      const letter = params.letterIndex === null ? null : LETTERS[params.letterIndex]!
-      const category = params.categoryIndex === null ? null : CATEGORIES[params.categoryIndex]!
+      const letter = params.letter
+      const category = params.category
 
       let rebuilt: string
       if (params.type === 'buchstabe') rebuilt = `Wörter mit ${letter!.toUpperCase()}`
@@ -94,7 +125,7 @@ describe('wortfluss generator', () => {
     for (let i = 0; i < runs; i++) {
       const trial = generateWortfluss((i % 3) + 1, createRng(i * 104729 + 7))
       const payload = trial.payload as WortflussPayload
-      const params = trial.params as { letterIndex: number | null; categoryIndex: number | null }
+      const params = trial.params as { letter: string | null; category: string | null }
 
       if (trial.itemType === 'buchstabe') {
         expect(payload.letter).not.toBeNull()
@@ -111,12 +142,12 @@ describe('wortfluss generator', () => {
 
       if (payload.letter !== null) {
         expect(LETTERS).toContain(payload.letter)
-        expect(LETTERS[params.letterIndex!]).toBe(payload.letter)
+        expect(params.letter).toBe(payload.letter)
         expect(payload.prompt).toContain(payload.letter.toUpperCase())
       }
       if (payload.category !== null) {
         expect(CATEGORIES).toContain(payload.category)
-        expect(CATEGORIES[params.categoryIndex!]).toBe(payload.category)
+        expect(params.category).toBe(payload.category)
         expect(payload.prompt).toContain(payload.category)
       }
     }
@@ -138,15 +169,15 @@ describe('wortfluss generator', () => {
       const payload = trial.payload as WortflussPayload
       const serialised = JSON.stringify(trial.params)
       expect(serialised).not.toContain(payload.prompt)
-      expect(Object.keys(trial.params).sort()).toEqual(['categoryIndex', 'letterIndex', 'type'])
+      expect(Object.keys(trial.params).sort()).toEqual(['category', 'letter', 'pool', 'type'])
     }
   })
 
   it('clamps a difficulty outside the declared range', () => {
     expect(generateWortfluss(0, createRng(1)).difficulty).toBe(1)
     expect(generateWortfluss(9, createRng(1)).difficulty).toBe(3)
-    expect(generateWortfluss(0, createRng(1)).itemType).toBe('buchstabe')
-    expect(generateWortfluss(9, createRng(1)).itemType).toBe('kombiniert')
+    expect(generateWortfluss(-5, createRng(1)).difficulty).toBe(1)
+    expect(generateWortfluss(Number.NaN, createRng(1)).difficulty).toBe(1)
   })
 })
 

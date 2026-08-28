@@ -106,7 +106,7 @@ onBeforeUnmount(() => engine.dispose())
 </script>
 
 <template>
-  <GameFrame :engine="frameEngine" hide-feedback>
+  <GameFrame :engine="frameEngine">
     <div class="flow">
       <section class="card flow__prompt">
         <p class="eyebrow">Aufgabe</p>

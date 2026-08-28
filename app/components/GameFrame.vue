@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { Engine } from '~/composables/useEngine'
 
-const props = defineProps<{ engine: Engine; hideFeedback?: boolean }>()
+const props = defineProps<{ engine: Engine }>()
 
 const clock = ref('')
 let clockTimer: ReturnType<typeof setInterval> | null = null
@@ -61,12 +61,6 @@ const counterText = computed(() =>
 
     <div class="shell frame__body">
       <slot />
-    </div>
-
-    <div v-if="!hideFeedback" aria-live="polite" class="sr-only">
-      <template v-if="engine.feedback.value">
-        {{ engine.feedback.value.correct ? 'Richtig' : 'Falsch' }}
-      </template>
     </div>
   </div>
 </template>

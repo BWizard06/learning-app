@@ -13,28 +13,11 @@ export interface WortflussPayload {
 
 export type WortflussTrial = Trial<WortflussPayload, null>
 
-export const LETTERS: readonly string[] = [
-  'a',
-  'b',
-  'd',
-  'e',
-  'f',
-  'g',
-  'h',
-  'k',
-  'l',
-  'm',
-  'n',
-  'o',
-  'p',
-  'r',
-  's',
-  't',
-  'u',
-  'v',
-  'w',
-  'z',
-]
+export const COMMON_LETTERS: readonly string[] = ['b', 'f', 'g', 'h', 'k', 'l', 'm', 'r', 's', 't', 'w']
+
+export const RARE_LETTERS: readonly string[] = ['a', 'd', 'e', 'n', 'o', 'p', 'u', 'v', 'z']
+
+export const LETTERS: readonly string[] = [...COMMON_LETTERS, ...RARE_LETTERS]
 
 export const CATEGORIES: readonly string[] = [
   'Tiere',
@@ -108,22 +91,21 @@ export function clampDifficulty(difficulty: number): number {
   return Math.min(3, Math.max(1, Math.round(difficulty)))
 }
 
-export function itemTypeFor(difficulty: number): ItemType {
-  const level = clampDifficulty(difficulty)
-  if (level === 1) return 'buchstabe'
-  if (level === 2) return 'kategorie'
-  return 'kombiniert'
+export function itemTypeForSeed(seed: number): ItemType {
+  return ITEM_TYPES[Math.abs(seed) % ITEM_TYPES.length]!
+}
+
+export function lettersFor(difficulty: number): readonly string[] {
+  return clampDifficulty(difficulty) >= 2 ? LETTERS : COMMON_LETTERS
 }
 
 export function generateWortfluss(difficulty: number, rng: Rng): WortflussTrial {
   const level = clampDifficulty(difficulty)
-  const itemType = itemTypeFor(level)
+  const itemType = itemTypeForSeed(rng.seed)
+  const letters = lettersFor(level)
 
-  const letterIndex = itemType === 'kategorie' ? null : rng.int(0, LETTERS.length - 1)
-  const categoryIndex = itemType === 'buchstabe' ? null : rng.int(0, CATEGORIES.length - 1)
-
-  const letter = letterIndex === null ? null : LETTERS[letterIndex]!
-  const category = categoryIndex === null ? null : CATEGORIES[categoryIndex]!
+  const letter = itemType === 'kategorie' ? null : letters[rng.int(0, letters.length - 1)]!
+  const category = itemType === 'buchstabe' ? null : CATEGORIES[rng.int(0, CATEGORIES.length - 1)]!
   const upper = letter === null ? '' : letter.toUpperCase()
 
   let prompt: string
@@ -134,7 +116,7 @@ export function generateWortfluss(difficulty: number, rng: Rng): WortflussTrial 
   return {
     itemType,
     difficulty: level,
-    params: { type: itemType, letterIndex, categoryIndex },
+    params: { type: itemType, letter, category, pool: level >= 2 ? 'alle' : 'haeufig' },
     payload: { letter, category, prompt },
     answer: null,
   }

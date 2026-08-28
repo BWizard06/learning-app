@@ -14,6 +14,7 @@ const definition: GameDefinition = {
   defaultDurationS: 60,
   difficultyRange: DIFFICULTY_RANGE,
   thresholds: { raw1: 2, raw4: 11, raw6: 22 },
+  scoresCorrectness: false,
   weight,
   generate: (difficulty, rng) => generateWortfluss(difficulty, rng),
   isCorrect: (_trial, response: JsonValue) =>

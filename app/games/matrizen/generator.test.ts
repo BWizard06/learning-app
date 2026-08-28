@@ -16,9 +16,12 @@ import {
   SIZES,
   buildPool,
   cellToSvg,
+  describeCell,
   generateMatrix,
+  readsAsCopy,
   type CellFeatures,
   type FeatureKey,
+  type MatrixPayload,
 } from './generator'
 
 type StoredRule = {
@@ -47,6 +50,10 @@ function parse(params: unknown): Parsed {
   return params as unknown as Parsed
 }
 
+function mod(value: number, size: number): number {
+  return ((value % size) + size) % size
+}
+
 function indexOf(feature: FeatureKey, cell: CellFeatures): number {
   return DOMAINS[feature].indexOf(cell[feature] as string | number)
 }
@@ -62,70 +69,114 @@ function gridOf(matrix: CellFeatures[], feature: FeatureKey): number[][] {
 }
 
 function step(a: number, b: number, size: number, wrap: boolean): number {
-  return wrap ? ((a - b) % size + size) % size : a - b
+  return wrap ? mod(a - b, size) : a - b
+}
+
+function ascending(values: number[]): number[] {
+  return [...values].sort((a, b) => a - b)
+}
+
+function sameList(a: number[], b: number[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index])
 }
 
 function differingFeatures(a: CellFeatures, b: CellFeatures): FeatureKey[] {
   return FEATURE_KEYS.filter((feature) => a[feature] !== b[feature])
 }
 
-function expectRuleHolds(rule: StoredRule, matrix: CellFeatures[]): void {
+function cellKey(cell: CellFeatures): string {
+  return FEATURE_KEYS.map((feature) => String(cell[feature])).join('|')
+}
+
+function ruleViolations(rule: StoredRule, matrix: CellFeatures[]): string[] {
   const feature = rule.feature
   const size = DOMAINS[feature].length
   const grid = gridOf(matrix, feature)
-  const flat = grid.flat()
+  const bad: string[] = []
 
   if (rule.kind === 'konstant') {
-    expect(new Set(flat).size, `${feature} muss konstant sein`).toBe(1)
-    expect(flat[0]).toBe(rule.value)
-    return
+    if (new Set(grid.flat()).size !== 1) bad.push(`${feature} ist nicht konstant`)
+    if (grid[0]![0] !== rule.value) bad.push(`${feature} steht nicht auf dem notierten Wert`)
+    return bad
   }
 
   if (rule.kind === 'konstant-in-zeile') {
     for (let row = 0; row < 3; row++) {
-      expect(new Set(grid[row]!).size, `${feature} Zeile ${row} nicht konstant`).toBe(1)
-      expect(grid[row]![0]).toBe(rule.rows![row])
+      if (new Set(grid[row]!).size !== 1) bad.push(`${feature} Zeile ${row} ist nicht konstant`)
+      if (grid[row]![0] !== rule.rows![row]) {
+        bad.push(`${feature} Zeile ${row} steht nicht auf dem notierten Wert`)
+      }
     }
-    expect(new Set(grid.map((line) => line[0]!)).size, `${feature} Zeilen nicht verschieden`).toBe(3)
+    if (new Set(grid.map((line) => line[0]!)).size !== 3) {
+      bad.push(`${feature} wiederholt eine Zeile`)
+    }
     for (let col = 0; col < 3; col++) {
-      expect(new Set([grid[0]![col]!, grid[1]![col]!, grid[2]![col]!]).size).toBe(3)
+      const column = [grid[0]![col]!, grid[1]![col]!, grid[2]![col]!]
+      if (new Set(column).size !== 3) bad.push(`${feature} Spalte ${col} wiederholt einen Wert`)
     }
-    return
+    return bad
   }
 
   if (rule.kind === 'verteilung') {
-    const expected = [...rule.values!].sort((a, b) => a - b)
+    const expected = ascending(rule.values!)
+    if (new Set(rule.values!).size !== 3) bad.push(`${feature} verteilt keine drei verschiedenen Werte`)
     for (let row = 0; row < 3; row++) {
-      expect([...grid[row]!].sort((a, b) => a - b)).toEqual(expected)
+      if (!sameList(ascending(grid[row]!), expected)) {
+        bad.push(`${feature} Zeile ${row} traegt nicht jeden Wert genau einmal`)
+      }
     }
     for (let col = 0; col < 3; col++) {
-      const column = [grid[0]![col]!, grid[1]![col]!, grid[2]![col]!].sort((a, b) => a - b)
-      expect(column).toEqual(expected)
+      const column = ascending([grid[0]![col]!, grid[1]![col]!, grid[2]![col]!])
+      if (!sameList(column, expected)) {
+        bad.push(`${feature} Spalte ${col} traegt nicht jeden Wert genau einmal`)
+      }
     }
-    return
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        if (grid[row]![col] !== rule.values![mod(row * rule.rowShift! + col, 3)]) {
+          bad.push(`${feature} folgt der notierten Verschiebung nicht`)
+        }
+      }
+    }
+    return bad
   }
 
   const wrap = rule.wrap === true
-  const colStep = wrap ? ((rule.colStep! % size) + size) % size : rule.colStep!
-  const rowShift = wrap ? ((rule.rowShift! % size) + size) % size : rule.rowShift!
+  const colStep = wrap ? mod(rule.colStep!, size) : rule.colStep!
+  const rowShift = wrap ? mod(rule.rowShift!, size) : rule.rowShift!
+  const start = wrap ? mod(rule.start!, size) : rule.start!
 
+  if (grid[0]![0] !== start) bad.push(`${feature} startet nicht auf dem notierten Wert`)
   for (let row = 0; row < 3; row++) {
-    expect(step(grid[row]![1]!, grid[row]![0]!, size, wrap)).toBe(colStep)
-    expect(step(grid[row]![2]!, grid[row]![1]!, size, wrap)).toBe(colStep)
+    if (step(grid[row]![1]!, grid[row]![0]!, size, wrap) !== colStep) {
+      bad.push(`${feature} Zeile ${row} schreitet nicht wie notiert`)
+    }
+    if (step(grid[row]![2]!, grid[row]![1]!, size, wrap) !== colStep) {
+      bad.push(`${feature} Zeile ${row} schreitet nicht wie notiert`)
+    }
   }
   for (let col = 0; col < 3; col++) {
-    expect(step(grid[1]![col]!, grid[0]![col]!, size, wrap)).toBe(rowShift)
-    expect(step(grid[2]![col]!, grid[1]![col]!, size, wrap)).toBe(rowShift)
+    if (step(grid[1]![col]!, grid[0]![col]!, size, wrap) !== rowShift) {
+      bad.push(`${feature} Spalte ${col} schreitet nicht wie notiert`)
+    }
+    if (step(grid[2]![col]!, grid[1]![col]!, size, wrap) !== rowShift) {
+      bad.push(`${feature} Spalte ${col} schreitet nicht wie notiert`)
+    }
   }
+  return bad
+}
+
+function fitsEveryRule(rules: StoredRule[], matrix: CellFeatures[]): boolean {
+  return rules.every((rule) => ruleViolations(rule, matrix).length === 0)
 }
 
 describe('matrizen generator', () => {
   it('satisfies the shared generator contract', () => {
     runGeneratorContract(definition, {
       expectIntegerAnswer: true,
-      minItemTypes: 4,
+      minItemTypes: 6,
       checkTrial: (trial) => {
-        const payload = trial.payload as { question: string; cells: string[] }
+        const payload = trial.payload as MatrixPayload
         expect(payload.cells).toHaveLength(8)
         for (const cell of payload.cells) expect(cell.startsWith('<svg')).toBe(true)
         expect(payload.question.length).toBeGreaterThan(0)
@@ -145,9 +196,45 @@ describe('matrizen generator', () => {
       const solution = parsed.options[parsed.correctIndex]!
 
       expect(parsed.matrix).toHaveLength(9)
+      expect(parsed.rules).toHaveLength(FEATURE_KEYS.length)
+      expect(parsed.rules.map((rule) => rule.feature)).toEqual([...FEATURE_KEYS])
       expect(parsed.matrix[8]).toEqual(solution)
 
-      for (const rule of parsed.rules) expectRuleHolds(rule, parsed.matrix)
+      for (const rule of parsed.rules) {
+        expect(ruleViolations(rule, parsed.matrix)).toEqual([])
+      }
+    }
+  })
+
+  it('leaves the correct option as the only one that completes the matrix', () => {
+    const runs = propertyRuns()
+    for (let i = 0; i < runs; i++) {
+      const trial = generateMatrix((i % 10) + 1, createRng(i * 2246822519 + 37))
+      const parsed = parse(trial.params)
+      const head = parsed.matrix.slice(0, 8)
+
+      const fitting = parsed.options
+        .map((option, index) => (fitsEveryRule(parsed.rules, [...head, option]) ? index : -1))
+        .filter((index) => index >= 0)
+
+      expect(fitting, `Optionen ${fitting.join(',')} passen alle`).toEqual([parsed.correctIndex])
+    }
+  })
+
+  it('shows the player exactly the matrix and the options that params describe', () => {
+    const runs = propertyRuns()
+    for (let i = 0; i < runs; i++) {
+      const trial = generateMatrix((i % 10) + 1, createRng(i * 3266489917 + 41))
+      const parsed = parse(trial.params)
+      const payload = trial.payload as MatrixPayload
+
+      expect(payload.cells).toEqual(parsed.matrix.slice(0, 8).map((cell) => cellToSvg(cell)))
+      expect(trial.options!.map((option) => option.svg)).toEqual(
+        parsed.options.map((cell) => cellToSvg(cell)),
+      )
+      expect(trial.options!.map((option) => option.label)).toEqual(
+        parsed.options.map((cell) => describeCell(cell)),
+      )
     }
   })
 
@@ -156,10 +243,12 @@ describe('matrizen generator', () => {
     for (let i = 0; i < runs; i++) {
       const trial = generateMatrix((i % 10) + 1, createRng(i * 40503 + 7))
       const parsed = parse(trial.params)
-      const vectors = parsed.options.map((cell) => JSON.stringify(cell))
+      const vectors = parsed.options.map((cell) => cellKey(cell))
       expect(new Set(vectors).size).toBe(OPTION_COUNT)
       const svgs = trial.options!.map((option) => option.svg)
       expect(new Set(svgs).size).toBe(OPTION_COUNT)
+      const labels = trial.options!.map((option) => option.label)
+      expect(new Set(labels).size).toBe(OPTION_COUNT)
     }
   })
 
@@ -172,6 +261,7 @@ describe('matrizen generator', () => {
       const kindOf = new Map(parsed.rules.map((rule) => [rule.feature, rule.kind]))
 
       let distractors = 0
+      const touched = new Set<string>()
       parsed.options.forEach((option, index) => {
         const source = parsed.sources[index]!
         if (index === parsed.correctIndex) {
@@ -180,6 +270,7 @@ describe('matrizen generator', () => {
           return
         }
         distractors++
+        touched.add(source.feature)
         const changed = differingFeatures(option, solution)
         expect(changed, `option ${index} aendert ${changed.length} Merkmale`).toHaveLength(1)
         expect(changed[0]).toBe(source.feature)
@@ -187,11 +278,81 @@ describe('matrizen generator', () => {
         expect(['links', 'oben', 'zeilenanfang', 'spaltenanfang', 'weiter']).toContain(source.source)
       })
       expect(distractors).toBe(DISTRACTOR_COUNT)
+      expect(touched.size).toBeGreaterThanOrEqual(2)
     }
   })
 
-  it('renders a distinct svg for every possible feature vector', () => {
-    const seen = new Map<string, string>()
+  it('reads every distractor off the cell its recorded misreading names', () => {
+    const runs = propertyRuns()
+    const reference: Record<string, [number, number]> = {
+      links: [2, 1],
+      oben: [1, 2],
+      zeilenanfang: [2, 0],
+      spaltenanfang: [0, 2],
+    }
+    for (let i = 0; i < runs; i++) {
+      const trial = generateMatrix((i % 10) + 1, createRng(i * 2654435769 + 53))
+      const parsed = parse(trial.params)
+      const ruleOf = new Map(parsed.rules.map((rule) => [rule.feature, rule]))
+      parsed.options.forEach((option, index) => {
+        const source = parsed.sources[index]!
+        const feature = source.feature as FeatureKey
+        const spot = reference[source.source]
+        if (spot) {
+          const neighbour = parsed.matrix[spot[0] * 3 + spot[1]]!
+          expect(
+            option[feature],
+            `${source.source} muss den Wert aus Zelle ${spot.join(',')} tragen`,
+          ).toBe(neighbour[feature])
+          return
+        }
+        if (source.source !== 'weiter') return
+        const rule = ruleOf.get(feature)!
+        expect(rule.kind).toBe('progression')
+        const size = DOMAINS[feature].length
+        const grid = gridOf(parsed.matrix, feature)
+        const beyond = grid[2]![2]! + rule.colStep!
+        expect(
+          indexOf(feature, option),
+          'weiter muss einen Schritt hinter die Matrix greifen',
+        ).toBe(rule.wrap ? mod(beyond, size) : beyond)
+      })
+    }
+  })
+
+  it('turns the shape only while it stays a triangle or a rhombus', () => {
+    const runs = propertyRuns()
+    let turning = 0
+    for (let i = 0; i < runs; i++) {
+      const trial = generateMatrix((i % 10) + 1, createRng(i * 1597334677 + 59))
+      const parsed = parse(trial.params)
+      const rotation = parsed.rules.find((rule) => rule.feature === 'rotation')!
+      const angles = new Set([...parsed.matrix, ...parsed.options].map((cell) => cell.rotation))
+      if (rotation.kind === 'konstant') {
+        expect(angles.size).toBe(1)
+        continue
+      }
+      turning++
+      for (const cell of [...parsed.matrix, ...parsed.options]) {
+        expect(['dreieck', 'raute'], 'gedrehte Formen muessen eindeutig bleiben').toContain(cell.shape)
+      }
+    }
+    expect(turning).toBeGreaterThan(0)
+  })
+
+  it('never lets the missing cell repeat its left or its upper neighbour', () => {
+    const runs = propertyRuns()
+    for (let i = 0; i < runs; i++) {
+      const trial = generateMatrix((i % 10) + 1, createRng(i * 433494437 + 61))
+      const parsed = parse(trial.params)
+      expect(cellKey(parsed.matrix[8]!)).not.toBe(cellKey(parsed.matrix[7]!))
+      expect(cellKey(parsed.matrix[8]!)).not.toBe(cellKey(parsed.matrix[5]!))
+    }
+  })
+
+  it('renders a distinct svg and a distinct description for every feature vector', () => {
+    const seenSvg = new Map<string, string>()
+    const seenText = new Map<string, string>()
     for (const shape of SHAPES) {
       for (const count of COUNTS) {
         for (const fill of FILLS) {
@@ -199,22 +360,29 @@ describe('matrizen generator', () => {
             for (const size of SIZES) {
               const features: CellFeatures = { shape, count, fill, rotation, size }
               const svg = cellToSvg(features)
+              const text = describeCell(features)
               expect(svg).toBe(cellToSvg(features))
               expect(svg).toContain('currentColor')
               expect(svg).not.toMatch(/#[0-9a-fA-F]{3,6}/)
+              expect(text).not.toContain('\u00df')
               const key = JSON.stringify(features)
-              expect(seen.has(svg), `svg kollidiert: ${seen.get(svg)} / ${key}`).toBe(false)
-              seen.set(svg, key)
+              expect(seenSvg.has(svg), `svg kollidiert: ${seenSvg.get(svg)} / ${key}`).toBe(false)
+              expect(seenText.has(text), `Text kollidiert: ${seenText.get(text)} / ${key}`).toBe(false)
+              seenSvg.set(svg, key)
+              seenText.set(text, key)
             }
           }
         }
       }
     }
-    expect(seen.size).toBe(SHAPES.length * COUNTS.length * FILLS.length * ROTATIONS.length * SIZES.length)
+    const total = SHAPES.length * COUNTS.length * FILLS.length * ROTATIONS.length * SIZES.length
+    expect(seenSvg.size).toBe(total)
+    expect(seenText.size).toBe(total)
   })
 
   it('keeps the fallback configuration usable', () => {
     expect(buildPool(FALLBACK_CONFIG).length).toBeGreaterThanOrEqual(DISTRACTOR_COUNT)
+    expect(readsAsCopy(FALLBACK_CONFIG)).toBe(false)
   })
 
   it('raises the number of rule bearing features with difficulty', () => {
@@ -241,7 +409,7 @@ describe('matrizen generator', () => {
       const kinds = parse(trial.params).rules.map((rule) => rule.kind)
       if (difficulty <= 3) expect(kinds).not.toContain('verteilung')
     }
-    expect(seen.size).toBeGreaterThanOrEqual(4)
+    expect(seen.size).toBeGreaterThanOrEqual(6)
   })
 
   it('never mixes the two shapes that look alike when small', () => {

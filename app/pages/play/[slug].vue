@@ -102,6 +102,8 @@ onMounted(() => {
   ready.value = true
 })
 
+const showsAccuracy = computed(() => definition.value!.scoresCorrectness !== false)
+
 const accuracyText = computed(() =>
   result.value ? `${Math.round(result.value.accuracy * 100)} %` : '—',
 )
@@ -148,12 +150,12 @@ const accuracyText = computed(() =>
     </p>
 
     <dl class="card result__facts">
-      <div>
+      <div v-if="showsAccuracy">
         <dt>Trefferquote</dt>
         <dd class="num">{{ accuracyText }}</dd>
       </div>
       <div>
-        <dt>Aufgaben</dt>
+        <dt>{{ showsAccuracy ? 'Aufgaben' : 'Wörter' }}</dt>
         <dd class="num">{{ result?.trials.length ?? 0 }}</dd>
       </div>
       <div>

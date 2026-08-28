@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineNuxtConfig({
   compatibilityDate: '2026-08-01',
   devtools: { enabled: false },
-  ssr: true,
+  ssr: false,
 
   modules: ['@pinia/nuxt', '@vite-pwa/nuxt'],
 
@@ -39,6 +39,10 @@ export default defineNuxtConfig({
 
   nitro: {
     minify: true,
+    prerender: {
+      routes: ['/'],
+      crawlLinks: false,
+    },
   },
 
   pwa: {
@@ -64,6 +68,7 @@ export default defineNuxtConfig({
       globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
       navigateFallback: '/',
       navigateFallbackDenylist: [/^\/api\//],
+      maximumFileSizeToCacheInBytes: 4_000_000,
       runtimeCaching: [],
       cleanupOutdatedCaches: true,
     },

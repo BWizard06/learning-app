@@ -359,6 +359,15 @@ function cellAt(config: Config, row: number, col: number): CellIndices {
   return cell
 }
 
+function sameCell(a: CellIndices, b: CellIndices): boolean {
+  return FEATURE_KEYS.every((feature) => a[feature] === b[feature])
+}
+
+export function readsAsCopy(config: Config): boolean {
+  const answer = cellAt(config, 2, 2)
+  return sameCell(answer, cellAt(config, 2, 1)) || sameCell(answer, cellAt(config, 1, 2))
+}
+
 function withFeature(cell: CellIndices, feature: FeatureKey, value: number): CellIndices {
   const next = {} as CellIndices
   for (const key of FEATURE_KEYS) next[key] = key === feature ? value : cell[key]
@@ -517,6 +526,7 @@ function buildTrial(config: Config, difficulty: number, pool: Candidate[], rng: 
 export function generateMatrix(difficulty: number, rng: Rng): MatrixTrial {
   for (let attempt = 0; attempt < 16; attempt++) {
     const config = buildConfig(difficulty, rng)
+    if (readsAsCopy(config)) continue
     const pool = buildPool(config)
     if (pool.length >= DISTRACTOR_COUNT) return buildTrial(config, difficulty, pool, rng)
   }

@@ -45,7 +45,7 @@ function submit() {
 }
 
 function onKeydown(event: KeyboardEvent) {
-  if (props.disabled) return
+  if (props.disabled || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
   if (event.key >= '0' && event.key <= '9') {
     append(event.key)
     event.preventDefault()

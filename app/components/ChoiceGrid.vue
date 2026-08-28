@@ -30,7 +30,7 @@ function choose(index: number) {
 }
 
 function onKeydown(event: KeyboardEvent) {
-  if (props.disabled) return
+  if (props.disabled || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
   const position = Number.parseInt(event.key, 10)
   if (Number.isFinite(position) && position >= 1 && position <= props.options.length) {
     choose(position - 1)
