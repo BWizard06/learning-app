@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { GameFinishPayload } from '~/composables/useGameSession'
-import { COLORS, type StroopColor, type StroopPayload } from './generator'
+import { COLORS, COLOR_LABELS, type StroopColor, type StroopPayload } from './generator'
 import definition from './definition'
 
 const props = defineProps<{ seed: number; difficulty: number; durationS?: number }>()
@@ -142,7 +142,7 @@ onBeforeUnmount(() => {
             'is-wrong': feedback !== null && !feedback.correct,
           }"
         >
-          <span v-if="task" class="stage__word" :class="`stage__word--${task.color}`">{{ task.word }}</span>
+          <span v-if="task" class="stage__word" :class="`stage__word--${task.color}`">{{ COLOR_LABELS[task.word as StroopColor] }}</span>
           <span v-if="feedback !== null" class="stage__mark" aria-hidden="true">
             {{ feedback.correct ? '✓' : '✗' }}
           </span>
@@ -171,7 +171,7 @@ onBeforeUnmount(() => {
           @click="answer(color)"
         >
           <span class="keys__hint num" aria-hidden="true">{{ index + 1 }}</span>
-          <span class="keys__label">{{ color }}</span>
+          <span class="keys__label">{{ COLOR_LABELS[color] }}</span>
           <span v-if="keyState(color) === 'correct'" class="keys__mark" aria-label="richtig">✓</span>
           <span v-else-if="keyState(color) === 'wrong'" class="keys__mark" aria-label="falsch">✗</span>
         </button>

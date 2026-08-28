@@ -8,6 +8,7 @@ import {
   ITEM_TYPES,
   generateComparison,
   lookalikeWeightFor,
+  unrelatedReplacements,
   type ComparePayload,
   type CompareTrial,
 } from './generator'
@@ -190,8 +191,18 @@ describe('zeichenvergleich generator', () => {
     expect([...used].sort()).toEqual([...DECLARED_LOOKALIKES].sort())
   })
 
+  it('offers every character except the original and its look-alikes as unrelated replacement', () => {
+    for (const original of BASE_CHARS.split('')) {
+      const expected = BASE_CHARS.split('').filter(
+        (char) => char !== original && !isDeclaredPair(char, original),
+      )
+      expect(unrelatedReplacements(original).slice().sort(), original).toEqual(expected.slice().sort())
+    }
+  })
+
   it('replaces one character with an unrelated one for ein-zeichen', () => {
-    const runs = propertyRuns()
+    const runs = Math.max(propertyRuns(), 60000)
+    const swaps = new Map<string, Set<string>>()
     let seen = 0
     for (let i = 0; i < runs; i++) {
       const trial = trialAt(i, 99991)
@@ -205,10 +216,27 @@ describe('zeichenvergleich generator', () => {
       expect(isDeclaredPair(before, after)).toBe(false)
       expect(BASE_CHARS).toContain(before)
       expect(BASE_CHARS).toContain(after)
-      expect(base[position]).toBe(params.line === 'top' ? after : before)
+      const original = params.line === 'top' ? after : before
+      expect(base[position]).toBe(original)
       expect(String(params.replacement)).toBe(params.line === 'top' ? before : after)
+      const bucket = swaps.get(original) ?? new Set<string>()
+      bucket.add(String(params.replacement))
+      swaps.set(original, bucket)
     }
+
     expect(seen).toBeGreaterThan(0)
+
+    for (const pair of DECLARED_LOOKALIKES) {
+      for (const original of [pair[0]!, pair[1]!]) {
+        const bucket = swaps.get(original)
+        if (!BASE_CHARS.includes(original)) continue
+        expect(bucket, `no sample replaced ${original}`).toBeDefined()
+        expect(bucket!.size, `too few replacements tried for ${original}`).toBeGreaterThan(28)
+        expect([...bucket!], `${original} was replaced by its look-alike`).not.toContain(
+          original === pair[0] ? pair[1] : pair[0],
+        )
+      }
+    }
   })
 
   it('lets params alone rebuild both rows', () => {

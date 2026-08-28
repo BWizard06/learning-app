@@ -43,17 +43,12 @@ const SUBSTITUTIONS: readonly (readonly [string, string])[] = LOOKALIKE_PAIRS.fl
   return out
 })
 
-export function lookalikePartners(char: string): string[] {
-  const out: string[] = []
-  for (const [first, second] of LOOKALIKE_PAIRS) {
-    if (first === char) out.push(second)
-    if (second === char) out.push(first)
-  }
-  return out
-}
-
 export function isLookalikePair(a: string, b: string): boolean {
   return LOOKALIKE_PAIRS.some(([first, second]) => (first === a && second === b) || (first === b && second === a))
+}
+
+export function unrelatedReplacements(original: string): string[] {
+  return ALPHABET.filter((char) => char !== original && !isLookalikePair(char, original))
 }
 
 function level(difficulty: number): number {
@@ -116,9 +111,7 @@ export function generateComparison(difficulty: number, rng: Rng): CompareTrial {
     variant = replaceAt(base, position, partner)
   } else if (type === 'ein-zeichen') {
     position = rng.int(0, length - 1)
-    const original = base[position]!
-    const blocked = new Set([original, ...lookalikePartners(original)])
-    replacement = rng.pick(ALPHABET.filter((char) => !blocked.has(char)))
+    replacement = rng.pick(unrelatedReplacements(base[position]!))
     variant = replaceAt(base, position, replacement)
   }
 

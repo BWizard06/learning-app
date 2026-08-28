@@ -4,14 +4,7 @@ import { runGeneratorContract } from '~~/shared/testing/generator-contract'
 import { propertyRuns } from '~~/shared/testing/property'
 import type { TrialResult } from '~~/shared/types'
 import definition from './definition'
-import {
-  COLORS,
-  ITEM_TYPES,
-  budgetFor,
-  generateStroop,
-  paletteFor,
-  type StroopPayload,
-} from './generator'
+import { COLORS, COLOR_LABELS, ITEM_TYPES, budgetFor, generateStroop, paletteFor, type StroopPayload } from './generator'
 
 const DIFFICULTIES = [1, 2, 3, 4]
 
@@ -283,5 +276,24 @@ describe('stroop scoring', () => {
     expect(keys).toContain('interferenzMs')
     expect(keys).toContain('kongruentTreffer')
     expect(keys).toContain('inkongruentTreffer')
+  })
+})
+
+describe('stroop colour words as the reader sees them', () => {
+  it('spells green with the umlaut, because the stimulus is read aloud in the head', () => {
+    expect(COLOR_LABELS.gruen).toBe('grün')
+  })
+
+  it('gives every colour a label', () => {
+    for (const color of COLORS) {
+      expect(COLOR_LABELS[color], color).toBeTruthy()
+      expect(COLOR_LABELS[color]).not.toContain('ß')
+    }
+    expect(new Set(Object.values(COLOR_LABELS)).size).toBe(COLORS.length)
+  })
+
+  it('keeps the identifier and the label apart, so params stay stable', () => {
+    expect(COLORS).toContain('gruen')
+    expect(Object.values(COLOR_LABELS)).not.toContain('gruen')
   })
 })

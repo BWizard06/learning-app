@@ -5,6 +5,13 @@ export const COLORS = ['rot', 'gelb', 'gruen', 'blau'] as const
 
 export type StroopColor = (typeof COLORS)[number]
 
+export const COLOR_LABELS: Record<StroopColor, string> = {
+  rot: 'rot',
+  gelb: 'gelb',
+  gruen: 'grün',
+  blau: 'blau',
+}
+
 export const KONGRUENT = 'kongruent'
 export const INKONGRUENT = 'inkongruent'
 
