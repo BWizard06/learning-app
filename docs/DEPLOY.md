@@ -180,6 +180,17 @@ ersetzen. Sonst aendert sich nichts, das Dockerfile funktioniert fuer beide Wege
 
 ---
 
+## Was beim Build passiert
+
+`npm run build` erzeugt zwei Dinge: den Nitro-Server fuer die API und eine **vorgerenderte
+`index.html`** als App-Shell. Die App laeuft als SPA, nicht serverseitig gerendert. Das ist kein
+Detail, sondern die Voraussetzung dafuer dass die PWA offline startet: bei serverseitigem Rendern
+gibt es kein statisches HTML, das der Service Worker vorab cachen koennte.
+
+Der Healthcheck im Container ruft `http://127.0.0.1:3000/api/health`. Damit das trifft, setzt das
+Dockerfile `NITRO_HOST=0.0.0.0`. Verifiziert: ohne diese Variable bindet Nitro nur auf `localhost`
+ueber IPv6, und der Healthcheck wuerde den Container dauerhaft als ungesund melden.
+
 ## Umgebungsvariablen
 
 | Variable | Vorgabe | Bedeutung |
