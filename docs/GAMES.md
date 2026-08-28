@@ -391,3 +391,97 @@ Der Ausdrucksauswerter ist selbst geschrieben, kein `eval` und kein `Function`.
 
 **Getestet** mit einer unabhängigen Brute-Force-Eindeutigkeitsprüfung über eine grosse Stichprobe
 und einer von Hand geschriebenen Vorrangtabelle (6+3·2=12, 6·3+2=20, 24:6−2=2, 2+3·4−5=9).
+
+---
+
+## ueberschlag, Überschlag
+
+**Konstrukt** Rechnerisches Denken
+**Modus** `sprint`, 90 Sekunden
+**Schwierigkeit** 1 bis 6
+**Gewicht** linear von 1.0 auf 2.0
+**Schwellen** `raw1: 4`, `raw4: 16`, `raw6: 34`
+
+**Aufgabenformat** eine Rechnung, fünf Ergebnisvorschläge, genau einer stimmt. Der Zweck ist die
+**Grössenordnung**, nicht das exakte Rechnen, deshalb der hohe Zeitdruck. Aufgabentypen:
+`multiplikation`, `division`, `prozent`, `summe` und `gemischt` (Produkt plus, Produkt minus,
+Summe mal).
+
+**Die Distraktoren sind bei diesem Spiel die eigentliche Konstruktion.** Jeder falsche Vorschlag
+entsteht aus einem benannten Fehler: `faktor-zehn-hoch` und `faktor-zehn-tief` fangen
+Grössenordnungsfehler ab, `kommastelle-hoch` und `kommastelle-tief` die verrutschte Stelle,
+`umkehroperation` das Verwechseln von mal und geteilt, und `knapp-daneben` liegt innerhalb von
+rund 15 Prozent. Der letzte ist der wichtigste, denn er verhindert, dass blosses Hinsehen genügt.
+
+Ein Test prüft, dass die richtige Antwort **weder systematisch an derselben Position** noch
+systematisch die grösste oder kleinste der fünf ist. Ohne das liesse sich das Spiel ohne Rechnen
+gewinnen.
+
+---
+
+## einheiten, Umrechnen
+
+**Konstrukt** Rechnerisches Denken
+**Modus** `sprint`, 120 Sekunden
+**Schwierigkeit** 1 bis 6
+**Gewicht** linear von 1.0 auf 2.0
+**Schwellen** `raw1: 4`, `raw4: 15`, `raw6: 32`
+
+**Sieben Aufgabentypen:** `laenge`, `flaeche`, `volumen`, `zeit`, `geschwindigkeit`, `massstab`
+und `bruch-prozent`. Freie Zahleneingabe, immer ganzzahlige Lösungen, die Zieleinheit steht neben
+dem Eingabefeld, damit man sie nicht erraten muss.
+
+**Der Fallstrick bei solchen Generatoren sind die Quadrat- und Kubikfaktoren.** 1 m² sind 10'000
+cm², nicht 100, und 1 m³ sind 1'000'000 cm³, nicht 1'000. Die Umrechnung ist deshalb als
+Zehnerexponent pro Einheit hinterlegt und der Faktor daraus abgeleitet, damit die Beziehung genau
+einmal ausgedrückt ist und nicht auseinanderdriften kann.
+
+Geprüft wird das gegen eine **von Hand geschriebene Tabelle im Testfile**, die den Generator
+nirgends benutzt: `m² → cm²` ist 10'000, `km² → m²` ist 1'000'000, `m³ → cm³` ist 1'000'000,
+`ha → m²` ist 10'000, `dm³ → l` ist 1, `36 km/h` sind `10 m/s`. Das ist der Unterschied zwischen
+einem Test, der etwas prüft, und einem, der die Formel des Generators wiederholt.
+
+---
+
+## datenlesen, Tabellen und Diagramme
+
+**Konstrukt** Rechnerisches Denken
+**Modus** `sprint`, 150 Sekunden
+**Schwierigkeit** 1 bis 6
+**Gewicht** linear von 1.0 auf 2.2
+**Schwellen** `raw1: 1.5`, `raw4: 6`, `raw6: 13`
+
+**Aufgabenformat** ein erzeugtes Diagramm als **inline SVG**, nie ein Bild, dazu eine Frage. Vier
+Darstellungen (Balken, Linie, Kreis, Tabelle) mal vier Fragearten (`differenz`, `anteil`, `trend`,
+`extrem`) ergeben den `item_type`, etwa `balken-differenz`. Die Kombination Kreis mal Trend
+entfällt, weil ein Kreisdiagramm keine zeitliche Entwicklung zeigt.
+
+Zahlenantworten über den Ziffernblock, Kategorieantworten über die Optionsfelder. Die Daten sind
+so gewählt, dass Anteile ganzzahlig aufgehen.
+
+Ein Test rechnet die Antwort im Testfile aus den Parametern nach und prüft, dass die Winkel eines
+Kreisdiagramms auf 360 Grad aufgehen.
+
+---
+
+## figurenreihen, Figurenreihen
+
+**Konstrukt** Logisches Denken
+**Modus** `sprint`, 150 Sekunden
+**Schwierigkeit** 1 bis 8
+**Gewicht** linear von 1.0 auf 3.0
+**Schwellen** `raw1: 1`, `raw4: 4`, `raw6: 9`
+
+**Aufgabenformat** eine waagrechte Folge erzeugter SVG-Figuren, die nächste fehlt, sechs
+Antwortoptionen. Fünf Transformationen, einzeln oder kombiniert: `rotation`, `spiegelung`,
+`anzahl`, `fuellung`, `position`. Welche davon laufen, steht im `item_type`, damit die
+Schwachstellenanalyse sie auseinanderhalten kann.
+
+**Schwierigkeitsachse** wie viele Transformationen gleichzeitig laufen, von einer auf Stufe 1 bis
+drei auf Stufe 8, und wie gross die Schritte sind.
+
+**Distraktoren** entstehen daraus, die Regel einen Schritt zu weit, einen zu wenig, auf das
+falsche Merkmal oder in die falsche Richtung anzuwenden. Alle sechs Optionen müssen sich sowohl
+als Merkmalsvektor als auch als gerendertes SVG unterscheiden; die zweite Bedingung ist die
+wichtigere, weil zwei verschiedene Vektoren sonst gleich aussehen könnten und die Aufgabe zwei
+richtige Antworten hätte.
