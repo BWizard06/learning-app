@@ -25,14 +25,29 @@ const phase = ref<Phase>('intro')
 const seed = ref(0)
 const startDifficulty = ref(definition.value!.difficultyRange[0])
 const result = shallowRef<GameFinishPayload | null>(null)
-const durationOverride = computed(() => {
-  if (!import.meta.dev) return undefined
-  const raw = Number.parseInt(String(route.query.dauer ?? ''), 10)
-  return Number.isFinite(raw) && raw > 0 ? raw : undefined
-})
-const { state, note, error, submit } = useSessionSubmit()
+const sync = useSyncStore()
+const sessionId = ref('')
 
-const durationText = computed(() => {
+const serverNote = computed(() => (sessionId.value ? sync.noteFor(sessionId.value) : null))
+
+const shownNote = computed(() => {
+  if (serverNote.value) return serverNote.value.value
+  if (!result.value) return null
+  return noteFromThresholds(result.value.rawScore, definition.value!.thresholds)
+})
+
+const noteSource = computed(() => serverNote.value?.source ?? 'thresholds')
+const noteProvisional = computed(() => serverNote.value === null && result.value !== null)
+
+const isBlock = computed(() => definition.value!.mode === 'block')
+
+const scopeLabel = computed(() => (isBlock.value ? 'Umfang' : 'Dauer'))
+
+const scopeText = computed(() => {
+  if (isBlock.value) {
+    const count = definition.value!.itemCount ?? 0
+    return count === 1 ? '1 Aufgabe' : `${count} Aufgaben`
+  }
   const seconds = definition.value!.defaultDurationS
   return seconds >= 60 ? `${Math.round(seconds / 60)} Minuten` : `${seconds} Sekunden`
 })
@@ -96,8 +111,8 @@ const accuracyText = computed(() =>
 
     <dl class="card intro__facts">
       <div>
-        <dt>Dauer</dt>
-        <dd class="num">{{ durationText }}</dd>
+        <dt>{{ scopeLabel }}</dt>
+        <dd class="num">{{ scopeText }}</dd>
       </div>
       <div>
         <dt>Ablauf</dt>
@@ -114,7 +129,6 @@ const accuracyText = computed(() =>
       v-if="PlayComponent"
       :seed="seed"
       :difficulty="startDifficulty"
-      :duration-s="durationOverride"
       @finish="onFinish"
     />
   </ClientOnly>
@@ -238,14 +252,5 @@ const accuracyText = computed(() =>
   margin-top: -0.5rem;
   font-size: 0.75rem;
   color: var(--faint);
-}
-
-.result__sync {
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
-  color: var(--ink);
-  background-color: var(--gold-soft);
-  border: 1px solid var(--gold);
-  border-radius: var(--radius-key);
 }
 </style>

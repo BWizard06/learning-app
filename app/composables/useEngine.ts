@@ -35,10 +35,18 @@ function defaultIsCorrect(trial: Trial, response: JsonValue): boolean {
   return JSON.stringify(response) === JSON.stringify(trial.answer)
 }
 
+function devQueryOverride(key: string): number | undefined {
+  if (!import.meta.dev || typeof window === 'undefined') return undefined
+  const raw = new URLSearchParams(window.location.search).get(key)
+  if (raw === null) return undefined
+  const parsed = Number.parseInt(raw, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
 export function useEngine(options: EngineOptions) {
   const { definition } = options
-  const durationS = options.durationS ?? definition.defaultDurationS
-  const itemCount = options.itemCount ?? definition.itemCount ?? 0
+  const durationS = devQueryOverride('dauer') ?? options.durationS ?? definition.defaultDurationS
+  const itemCount = devQueryOverride('items') ?? options.itemCount ?? definition.itemCount ?? 0
   const feedbackMs = options.feedbackMs ?? 320
 
   const status = ref<EngineStatus>('idle')

@@ -29,7 +29,7 @@ const grouped = computed(() =>
           <NuxtLink :to="`/play/${game.slug}`" class="card home__card tap">
             <span class="home__name">{{ game.name }}</span>
             <span class="home__blurb">{{ game.blurb }}</span>
-            <span class="num home__meta">{{ Math.round(game.defaultDurationS / 60) }} min</span>
+            <span class="num home__meta">{{ game.mode === 'block' ? `${game.itemCount ?? 0} Aufg.` : `${Math.round(game.defaultDurationS / 60)} min` }}</span>
           </NuxtLink>
         </li>
       </ul>

@@ -16,7 +16,8 @@
     "test:full": "PROPERTY_RUNS=10000 vitest run",
     "e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node server/db/migrate.mjs"
+    "db:migrate": "node server/db/migrate.mjs",
+    "e2e:install": "playwright install chromium"
   },
   "dependencies": {
     "@pinia/nuxt": "^1.0.2",
