@@ -2,6 +2,14 @@ import { expect, test } from '@playwright/test'
 import { games } from '../app/games/index'
 import { startGame, storedSessions, tapTrailInOrder, waitForResult } from './helpers'
 
+test.beforeAll(async ({ browser }) => {
+  const page = await browser.newPage()
+  for (const game of games) {
+    await page.goto(`/play/${game.slug}`, { waitUntil: 'domcontentloaded' }).catch(() => {})
+  }
+  await page.close()
+})
+
 test.describe('catalogue', () => {
   test('lists every registered game and links to it', async ({ page }) => {
     await page.goto('/')

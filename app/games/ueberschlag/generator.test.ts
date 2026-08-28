@@ -6,6 +6,7 @@ import definition from './definition'
 import {
   GROUP_MARK,
   ITEM_TYPES,
+  MIN_VALUE,
   MISTAKE_KINDS,
   MIXED_FORMS,
   OPTION_COUNT,
@@ -177,8 +178,8 @@ describe('ueberschlag generator', () => {
         const payload = trial.payload as EstimatePayload
         expect(payload.expression.length).toBeGreaterThan(0)
         expect(payload.question.length).toBeGreaterThan(0)
-        expect(payload.expression).not.toContain('ß')
-        expect(payload.question).not.toContain('ß')
+        expect(payload.expression).not.toContain('\u00df')
+        expect(payload.question).not.toContain('\u00df')
         expect(trial.options).toHaveLength(OPTION_COUNT)
         expect(trial.answer).toBe(trial.correctIndex)
       },
@@ -195,7 +196,7 @@ describe('ueberschlag generator', () => {
       checkValue(params)
       expect(solution.kind).toBe('richtig')
       expect(solution.value).toBe(params.value)
-      expect(params.value).toBeGreaterThanOrEqual(100)
+      expect(params.value).toBeGreaterThanOrEqual(MIN_VALUE)
       expect(trial.options![params.correctIndex]!.label).toBe(
         String(params.value).replace(/\B(?=(\d{3})+(?!\d))/g, GROUP_MARK),
       )
@@ -318,7 +319,7 @@ describe('ueberschlag generator', () => {
     }
   })
 
-  it('does not park the correct option at the largest or the smallest value', () => {
+  it('spreads the rank of the correct option over all five sizes', () => {
     const runs = statisticalRuns()
     const counts = new Map<number, number>()
     for (let i = 0; i < runs; i++) {
@@ -330,15 +331,13 @@ describe('ueberschlag generator', () => {
 
     let mean = 0
     for (let rank = 1; rank <= OPTION_COUNT; rank++) {
-      const count = counts.get(rank) ?? 0
-      expect(count, `Rang ${rank} kommt nie vor`).toBeGreaterThan(0)
-      expect(count / runs, `Rang ${rank} traegt zu viel`).toBeLessThan(0.45)
-      mean += (rank * count) / runs
+      const share = (counts.get(rank) ?? 0) / runs
+      expect(share, `Rang ${rank} traegt ${(share * 100).toFixed(1)} Prozent`).toBeGreaterThan(0.05)
+      expect(share, `Rang ${rank} traegt ${(share * 100).toFixed(1)} Prozent`).toBeLessThan(0.4)
+      mean += rank * share
     }
-    expect((counts.get(1) ?? 0) / runs).toBeLessThan(0.3)
-    expect((counts.get(OPTION_COUNT) ?? 0) / runs).toBeLessThan(0.3)
-    expect(mean).toBeGreaterThan(2.2)
-    expect(mean).toBeLessThan(3.8)
+    expect(mean).toBeGreaterThan(2.4)
+    expect(mean).toBeLessThan(3.6)
   })
 
   it('moves the near miss closer to the truth as difficulty rises', () => {

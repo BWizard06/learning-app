@@ -318,16 +318,18 @@ describe('figurenreihen generator', () => {
 
   it('never lets a feature leave its domain', () => {
     const runs = propertyRuns()
+    const outside: string[] = []
     for (let i = 0; i < runs; i++) {
       const parsed = parse(trialFor(i, 83).params)
       for (const figure of [...parsed.figures, ...parsed.options]) {
         for (const feature of FEATURE_KEYS) {
-          expect(Number.isInteger(figure[feature])).toBe(true)
-          expect(figure[feature]).toBeGreaterThanOrEqual(0)
-          expect(figure[feature]).toBeLessThan(SIZE[feature])
+          const value = figure[feature]
+          if (Number.isInteger(value) && value >= 0 && value < SIZE[feature]) continue
+          outside.push(`Lauf ${i}: ${feature} steht auf ${value}`)
         }
       }
     }
+    expect(outside).toEqual([])
   })
 
   it('names every running transformation in the item type', () => {

@@ -59,7 +59,7 @@ onBeforeUnmount(() => engine.dispose())
 
 <template>
   <GameFrame :engine="engine">
-    <div class="run">
+    <div class="run" :class="waehlbar ? 'run--wahl' : 'run--zahl'">
       <p class="eyebrow run__eyebrow">{{ task?.titel ?? '' }}</p>
 
       <div v-if="task" class="run__data card">
@@ -85,24 +85,25 @@ onBeforeUnmount(() => engine.dispose())
 
       <p v-if="task" class="run__question">{{ task.frage }}</p>
 
-      <div
-        v-if="!waehlbar"
-        class="run__answer"
-        :class="{ 'is-correct': hit, 'is-wrong': feedback && !hit }"
-      >
-        <span class="num run__value">{{ entry || '·' }}</span>
-        <span v-if="task?.suffix" class="run__suffix num">{{ task.suffix }}</span>
-        <span v-if="feedback" class="run__mark" aria-hidden="true">{{ hit ? '✓' : '✗' }}</span>
-      </div>
+      <div class="run__foot">
+        <div
+          v-if="!waehlbar"
+          class="run__answer"
+          :class="{ 'is-correct': hit, 'is-wrong': feedback && !hit }"
+        >
+          <span class="num run__value">{{ entry || '·' }}</span>
+          <span v-if="task?.suffix" class="run__suffix num">{{ task.suffix }}</span>
+          <span v-if="feedback" class="run__mark" aria-hidden="true">{{ hit ? '✓' : '✗' }}</span>
+        </div>
 
-      <p class="run__hint" role="status">
-        <span v-if="feedback && hit">✓ richtig</span>
-        <span v-else-if="feedback" class="num">✗ richtig wäre {{ loesung }}</span>
-        <span v-else>&nbsp;</span>
-      </p>
+        <p class="run__hint" role="status">
+          <span v-if="feedback && hit">✓ richtig</span>
+          <span v-else-if="feedback" class="num">✗ richtig wäre {{ loesung }}</span>
+          <span v-else>&nbsp;</span>
+        </p>
 
-      <div v-if="waehlbar" class="run__choices">
         <ChoiceGrid
+          v-if="waehlbar"
           :options="options"
           :columns="2"
           :disabled="locked"
@@ -110,8 +111,8 @@ onBeforeUnmount(() => engine.dispose())
           :chosen-index="chosen"
           @select="choose"
         />
+        <NumberPad v-else v-model="entry" :disabled="locked" submit-label="Prüfen" @submit="submit" />
       </div>
-      <NumberPad v-else v-model="entry" :disabled="locked" submit-label="Prüfen" @submit="submit" />
     </div>
   </GameFrame>
 </template>
@@ -124,11 +125,11 @@ onBeforeUnmount(() => engine.dispose())
 }
 
 .run__eyebrow {
-  padding-block: 0.125rem 0.5rem;
+  padding-block: 0.125rem 0.4375rem;
 }
 
 .run__data {
-  padding: 0.5rem 0.5rem 0.375rem;
+  padding: 0.375rem 0.4375rem 0.25rem;
   color: var(--ink);
 }
 
@@ -140,7 +141,11 @@ onBeforeUnmount(() => engine.dispose())
   display: block;
   width: 100%;
   height: auto;
-  max-height: 33vh;
+  max-height: 25vh;
+}
+
+.run--wahl .run__figure :deep(svg) {
+  max-height: 34vh;
 }
 
 .run__figure :deep(text) {
@@ -155,8 +160,12 @@ onBeforeUnmount(() => engine.dispose())
 }
 
 .run__sheet {
-  max-height: 33vh;
+  max-height: 25vh;
   overflow-y: auto;
+}
+
+.run--wahl .run__sheet {
+  max-height: 34vh;
 }
 
 .run__table {
@@ -167,7 +176,7 @@ onBeforeUnmount(() => engine.dispose())
 
 .run__table th,
 .run__table td {
-  padding: 0.4375rem 0.5rem;
+  padding: 0.375rem 0.5rem;
   text-align: left;
   border-bottom: 1px solid var(--rule);
 }
@@ -194,10 +203,18 @@ onBeforeUnmount(() => engine.dispose())
 }
 
 .run__question {
-  padding-block: 0.75rem 0.5rem;
-  font-size: clamp(1.0625rem, 4.4vw, 1.3125rem);
+  padding-block: 0.625rem 0.375rem;
+  font-size: clamp(1rem, 4.2vw, 1.1875rem);
   font-weight: 500;
   line-height: 1.3;
+}
+
+.run__foot {
+  margin-top: auto;
+}
+
+.run--wahl .run__foot {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
 
 .run__answer {
@@ -206,7 +223,7 @@ onBeforeUnmount(() => engine.dispose())
   align-items: baseline;
   justify-content: center;
   gap: 0.375rem;
-  padding-block: 0.5rem;
+  padding-block: 0.375rem;
   border-bottom: 2px solid var(--rule);
   transition: border-color 120ms ease;
 }
@@ -220,9 +237,9 @@ onBeforeUnmount(() => engine.dispose())
 }
 
 .run__value {
-  font-size: 2rem;
+  font-size: 1.875rem;
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 .run__suffix {
@@ -233,7 +250,7 @@ onBeforeUnmount(() => engine.dispose())
 .run__mark {
   position: absolute;
   right: 0;
-  bottom: 0.5rem;
+  bottom: 0.375rem;
   font-size: 1.375rem;
   font-weight: 700;
 }
@@ -247,15 +264,10 @@ onBeforeUnmount(() => engine.dispose())
 }
 
 .run__hint {
-  min-height: 1.5rem;
-  padding-block: 0.4375rem 0.5rem;
+  min-height: 1.25rem;
+  padding-block: 0.3125rem 0.4375rem;
   font-size: 0.8125rem;
   text-align: center;
   color: var(--muted);
-}
-
-.run__choices {
-  margin-top: auto;
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
 </style>

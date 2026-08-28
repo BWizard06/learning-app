@@ -652,6 +652,9 @@ export function generateDatenlesen(difficulty: number, rng: Rng): DatenTrial {
     if (trendGewinner(daten.werte, variante) < 0) daten = fixedDataset(rng, n, rund, zeitlich)
   }
 
+  const schritt = rund ? (n <= 5 ? 5 : 2) : 1
+  const rundEffektiv = rund && daten.prozente.every((prozent) => prozent % schritt === 0)
+
   const aufgabe = aufgabeFor(kind, variante, daten, rng)
   const itemType = `${chart}-${kind}`
 
@@ -672,7 +675,7 @@ export function generateDatenlesen(difficulty: number, rng: Rng): DatenTrial {
   const trial: DatenTrial = {
     itemType,
     difficulty,
-    params: paramsFor(itemType, chart, kind, variante, rund, daten, aufgabe),
+    params: paramsFor(itemType, chart, kind, variante, rundEffektiv, daten, aufgabe),
     payload,
     answer: aufgabe.answer,
   }

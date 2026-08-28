@@ -439,9 +439,9 @@ describe('einheiten generator', () => {
     expect(Math.max(...stepsAt(6))).toBeGreaterThanOrEqual(6)
 
     for (const dimension of ['laenge', 'flaeche', 'volumen'] as const) {
-      const widest = (difficulty: number) =>
-        Math.max(...pairsFor(dimension, difficulty).map((pair) => pair.steps))
-      expect(widest(6), dimension).toBeGreaterThan(widest(1))
+      const spread = (difficulty: number) => pairsFor(dimension, difficulty).map((pair) => pair.steps)
+      expect(Math.max(...spread(6)), dimension).toBeGreaterThan(Math.max(...spread(1)))
+      expect(Math.min(...spread(6)), dimension).toBeGreaterThan(Math.min(...spread(1)))
     }
   })
 })

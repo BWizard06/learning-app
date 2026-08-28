@@ -13,6 +13,8 @@ globals.useGameSession = useGameSession
 
 const stubs = { GameFrame: { template: '<div class="frame-stub"><slot /></div>' } }
 
+const SHARP_S = String.fromCharCode(223)
+
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -50,7 +52,7 @@ describe('einheiten play surface', () => {
     expect(wrapper.find('.run__unit').text()).toBe(trial.payload.suffix)
     expect(wrapper.find('.eyebrow').text()).toBe(trial.payload.label)
     expect(wrapper.html()).toContain('Prüfen')
-    expect(wrapper.html()).not.toContain('ß')
+    expect(wrapper.html()).not.toContain(SHARP_S)
 
     wrapper.unmount()
   })

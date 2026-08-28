@@ -273,46 +273,71 @@ function fits(kind: MistakeKind, value: number, truth: number): boolean {
   return bandOf(value / truth) === wanted
 }
 
-function distractorPool(spec: Spec, rng: Rng): Candidate[] {
-  const pool: Candidate[] = []
-  const truth = spec.value
-
-  const tenUp = truth * 10
-  if (fits('faktor-zehn-hoch', tenUp, truth)) pool.push({ kind: 'faktor-zehn-hoch', value: tenUp })
-
-  const tenDown = Math.round(truth / 10)
-  if (fits('faktor-zehn-tief', tenDown, truth)) pool.push({ kind: 'faktor-zehn-tief', value: tenDown })
-
-  const shifted = Math.round(truth / 100)
-  const wantsDown = truth >= MIN_VALUE_FOR_KOMMA_TIEF && rng.bool()
-  if (wantsDown && fits('kommastelle-tief', shifted, truth)) {
-    pool.push({ kind: 'kommastelle-tief', value: shifted })
-  } else if (fits('kommastelle-hoch', truth * 100, truth)) {
-    pool.push({ kind: 'kommastelle-hoch', value: truth * 100 })
-  }
-
-  if (spec.inverse !== null && fits('umkehroperation', spec.inverse, truth)) {
-    pool.push({ kind: 'umkehroperation', value: spec.inverse })
-  }
-
-  return pool
+function tenCandidates(spec: Spec): Candidate[] {
+  const out: Candidate[] = []
+  const high = spec.value * 10
+  if (fits('faktor-zehn-hoch', high, spec.value)) out.push({ kind: 'faktor-zehn-hoch', value: high })
+  const low = Math.round(spec.value / 10)
+  if (fits('faktor-zehn-tief', low, spec.value)) out.push({ kind: 'faktor-zehn-tief', value: low })
+  return out
 }
 
-function nearMiss(spec: Spec, difficulty: number, rng: Rng): Candidate {
+function kommaCandidates(spec: Spec): Candidate[] {
+  const out: Candidate[] = []
+  const shifted = Math.round(spec.value / 100)
+  if (spec.value >= MIN_VALUE_FOR_KOMMA_TIEF && fits('kommastelle-tief', shifted, spec.value)) {
+    out.push({ kind: 'kommastelle-tief', value: shifted })
+  }
+  const raised = spec.value * 100
+  if (fits('kommastelle-hoch', raised, spec.value)) {
+    out.push({ kind: 'kommastelle-hoch', value: raised })
+  }
+  return out
+}
+
+function inverseCandidate(spec: Spec): Candidate | null {
+  if (spec.inverse === null || !fits('umkehroperation', spec.inverse, spec.value)) return null
+  return { kind: 'umkehroperation', value: spec.inverse }
+}
+
+function dropOneEach(pool: readonly Candidate[]): Candidate[][] {
+  if (pool.length <= DISTRACTOR_COUNT - 1) return [pool.slice()]
+  return pool.map((_, skip) => pool.filter((__, index) => index !== skip))
+}
+
+function plansByRank(spec: Spec, difficulty: number, rng: Rng): Map<number, Candidate[][]> {
+  const truth = spec.value
   const range = NEAR_MISS[level(difficulty)]!
-  const delta = rng.float(range[0], range[1]) * rng.sign()
-  return { kind: 'knapp-daneben', value: Math.round(spec.value * (1 + delta)) }
+  const gap = rng.float(range[0], range[1])
+  const tens = tenCandidates(spec)
+  const inverse = inverseCandidate(spec)
+  const byRank = new Map<number, Candidate[][]>()
+
+  for (const komma of kommaCandidates(spec)) {
+    const pool = inverse === null ? [...tens, komma] : [...tens, komma, inverse]
+    for (const subset of dropOneEach(pool)) {
+      for (const direction of [-1, 1]) {
+        const near: Candidate = {
+          kind: 'knapp-daneben',
+          value: Math.round(truth * (1 + direction * gap)),
+        }
+        const plan = [...subset, near]
+        const rank = 1 + plan.filter((candidate) => candidate.value < truth).length
+        const bucket = byRank.get(rank)
+        if (bucket) bucket.push(plan)
+        else byRank.set(rank, [plan])
+      }
+    }
+  }
+
+  return byRank
 }
 
 function buildTrial(spec: Spec, difficulty: number, rng: Rng): EstimateTrial {
-  const pool = distractorPool(spec, rng)
-  const wanted = DISTRACTOR_COUNT - 1
-  const picked = pool.length > wanted ? rng.sample(pool, wanted) : pool
-  const entries = rng.shuffle([
-    { kind: 'richtig' as OptionKind, value: spec.value },
-    nearMiss(spec, difficulty, rng),
-    ...picked,
-  ])
+  const byRank = plansByRank(spec, difficulty, rng)
+  const ranks = [...byRank.keys()].sort((a, b) => a - b)
+  const picked = rng.pick(byRank.get(rng.pick(ranks))!)
+  const entries = rng.shuffle([{ kind: 'richtig' as OptionKind, value: spec.value }, ...picked])
 
   const correctIndex = entries.findIndex((entry) => entry.kind === 'richtig')
 

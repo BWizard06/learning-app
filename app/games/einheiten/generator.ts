@@ -144,6 +144,7 @@ export function percentFor(numerator: number, denominator: number): number {
 }
 
 const PRODUCT_MAX = 1_000_000
+const MIN_STEPS: readonly number[] = [1, 1, 1, 2, 2, 3]
 const MAX_STEPS: readonly number[] = [3, 3, 4, 5, 6, 6]
 const VALUE_MAX: readonly number[] = [40, 60, 120, 250, 500, 900]
 const TIME_SPAN: readonly number[] = [1, 1, 2, 2, 3, 3]
@@ -221,12 +222,13 @@ export function pairsFor(dimension: MetricDimension, difficulty: number): UnitPa
   const units = allowsAwkward(difficulty)
     ? METRIC_UNITS[dimension]
     : METRIC_UNITS[dimension].filter((unit) => !unit.awkward)
+  const minSteps = MIN_STEPS[tier(difficulty)]!
   const maxSteps = MAX_STEPS[tier(difficulty)]!
   const pairs: UnitPair[] = []
   for (const from of units) {
     for (const to of units) {
       const steps = Math.abs(from.exponent - to.exponent)
-      if (steps === 0 || steps > maxSteps) continue
+      if (steps < minSteps || steps > maxSteps) continue
       pairs.push({ from, to, steps })
     }
   }
