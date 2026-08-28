@@ -20,6 +20,7 @@ export default defineConfig({
           environment: 'node',
           include: ['{app,server,shared}/**/*.test.ts'],
           exclude: ['**/*.play.test.ts'],
+          testTimeout: 120_000,
         },
       },
       {

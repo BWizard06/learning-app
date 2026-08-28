@@ -7,6 +7,8 @@ import datenlesen from './datenlesen/definition'
 import zahlenreihen from './zahlenreihen/definition'
 import matrizen from './matrizen/definition'
 import figurenreihen from './figurenreihen/definition'
+import syllogismen from './syllogismen/definition'
+import wuerfel from './wuerfel/definition'
 import wortfluss from './wortfluss/definition'
 import d2 from './d2/definition'
 import symbolzahl from './symbolzahl/definition'
@@ -14,6 +16,11 @@ import stroop from './stroop/definition'
 import zeichenvergleich from './zeichenvergleich/definition'
 import gonogo from './gonogo/definition'
 import trailmaking from './trailmaking/definition'
+import nback from './nback/definition'
+import zahlenspanne from './zahlenspanne/definition'
+import corsi from './corsi/definition'
+import figurenlernen from './figurenlernen/definition'
+import faktenlernen from './faktenlernen/definition'
 
 export const CONSTRUCT_ORDER: Construct[] = [
   'rechnen',
@@ -25,7 +32,7 @@ export const CONSTRUCT_ORDER: Construct[] = [
   'text',
 ]
 
-export const games: GameDefinition[] = [kopfrechnen, ueberschlag, rechenzeichen, einheiten, datenlesen, zahlenreihen, matrizen, figurenreihen, wortfluss, d2, symbolzahl, stroop, zeichenvergleich, gonogo, trailmaking].sort((a, b) => {
+export const games: GameDefinition[] = [kopfrechnen, ueberschlag, rechenzeichen, einheiten, datenlesen, zahlenreihen, matrizen, figurenreihen, syllogismen, wuerfel, wortfluss, d2, symbolzahl, stroop, zeichenvergleich, gonogo, trailmaking, nback, zahlenspanne, corsi, figurenlernen, faktenlernen].sort((a, b) => {
   const byConstruct = CONSTRUCT_ORDER.indexOf(a.construct) - CONSTRUCT_ORDER.indexOf(b.construct)
   if (byConstruct !== 0) return byConstruct
   return a.name.localeCompare(b.name, 'de-CH')

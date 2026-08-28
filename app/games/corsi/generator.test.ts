@@ -196,6 +196,27 @@ describe('corsi generator', () => {
     }
   })
 
+  it('asks for the direction that the item type promises', () => {
+    const prompts = new Map<string, Set<string>>()
+    for (let i = 0; i < 600; i++) {
+      const { trial, payload } = trialAt(DIFFICULTIES[i % DIFFICULTIES.length]!, i * 40503 + 21)
+      const bucket = prompts.get(trial.itemType) ?? new Set<string>()
+      bucket.add(payload.prompt)
+      prompts.set(trial.itemType, bucket)
+    }
+
+    expect([...prompts.keys()].sort()).toEqual([...ITEM_TYPES].sort())
+    for (const [type, texts] of prompts) {
+      expect(texts.size, `${type} carries more than one prompt`).toBe(1)
+    }
+
+    const forward = [...prompts.get('vorwaerts')!][0]!
+    const backward = [...prompts.get('rueckwaerts')!][0]!
+    expect(forward).not.toBe(backward)
+    expect(forward.toLowerCase()).toContain('derselben reihenfolge')
+    expect(backward.toLowerCase()).toContain('umgekehrter reihenfolge')
+  })
+
   it('spreads the lit blocks evenly over the board', () => {
     const rounds = 4000
     const inSequence = new Array<number>(BLOCKS.length).fill(0)

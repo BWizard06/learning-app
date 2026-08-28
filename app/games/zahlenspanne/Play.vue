@@ -104,10 +104,10 @@ onBeforeUnmount(() => {
 
       <div class="run__beads" aria-hidden="true">
         <span
-          v-for="(digit, index) in digits"
-          :key="index"
+          v-for="position in digits.length"
+          :key="position"
           class="run__bead"
-          :class="{ 'is-done': answering || index <= cursor }"
+          :class="{ 'is-done': answering || position - 1 <= cursor }"
         />
       </div>
 

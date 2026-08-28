@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { ChoiceOption } from '~~/shared/types'
 import type { GameFinishPayload } from '~/composables/useGameSession'
 import type { FactsPayload } from './generator'
@@ -26,6 +26,7 @@ const questionIndex = ref(0)
 const answers = ref<number[]>([])
 const distractionIndex = ref(0)
 const summary = ref<{ korrekt: number; gesamt: number } | null>(null)
+const busy = ref(false)
 
 let ticker: ReturnType<typeof setInterval> | null = null
 let deadline = 0
@@ -51,8 +52,8 @@ const distractionNumber = computed(() => {
 
 const statusText = computed(() => {
   if (summary.value) return `${summary.value.korrekt} von ${summary.value.gesamt} richtig`
-  if (phase.value === 'lernen') return `Noch ${remaining.value} Sekunden zum Einprägen`
-  if (phase.value === 'ablenkung') return `Zwischenaufgabe, noch ${remaining.value} Sekunden`
+  if (phase.value === 'lernen') return 'Steckbriefe einprägen, danach folgen Fragen dazu'
+  if (phase.value === 'ablenkung') return 'Kurze Zwischenaufgabe, gleich geht es weiter'
   return `Frage ${questionIndex.value + 1} von ${questions.value.length}`
 })
 
@@ -114,13 +115,14 @@ function finishRecall() {
 }
 
 function answerQuestion(index: number) {
-  if (phase.value !== 'abfrage' || locked.value) return
+  if (phase.value !== 'abfrage' || locked.value || busy.value) return
+  busy.value = true
   answers.value = [...answers.value, index]
-  if (questionIndex.value + 1 < questions.value.length) {
-    questionIndex.value += 1
-    return
-  }
-  finishRecall()
+  if (questionIndex.value + 1 < questions.value.length) questionIndex.value += 1
+  else finishRecall()
+  nextTick(() => {
+    busy.value = false
+  })
 }
 
 onMounted(() => {
@@ -137,11 +139,15 @@ onBeforeUnmount(() => {
 <template>
   <GameFrame :engine="engine">
     <div class="run">
-      <p class="eyebrow run__eyebrow">
-        <span v-if="phase === 'lernen'">Steckbriefe einprägen</span>
-        <span v-else-if="phase === 'ablenkung'">Zwischenaufgabe</span>
-        <span v-else>Abfrage</span>
-      </p>
+      <div class="run__head">
+        <p class="eyebrow">
+          <span v-if="phase === 'lernen'">Steckbriefe einprägen</span>
+          <span v-else-if="phase === 'ablenkung'">Zwischenaufgabe</span>
+          <span v-else>Abfrage</span>
+        </p>
+        <span v-if="phase !== 'abfrage'" class="num run__clock">{{ remaining }} s</span>
+        <span v-else class="num run__clock">{{ questionIndex + 1 }} / {{ questions.length }}</span>
+      </div>
 
       <div v-if="task && phase === 'lernen'" class="run__stage">
         <ul class="profiles">
@@ -174,9 +180,9 @@ onBeforeUnmount(() => {
         <p class="run__question">{{ question?.text ?? '' }}</p>
       </div>
 
-      <p class="run__status" role="status">{{ statusText }}</p>
-
       <div class="run__foot">
+        <p class="run__status" role="status">{{ statusText }}</p>
+
         <button
           v-if="phase === 'lernen'"
           type="button"
@@ -212,8 +218,18 @@ onBeforeUnmount(() => {
   flex-direction: column;
 }
 
-.run__eyebrow {
+.run__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   padding-block: 0.25rem 0.75rem;
+}
+
+.run__clock {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .run__stage {
@@ -238,20 +254,21 @@ onBeforeUnmount(() => {
 }
 
 .profile {
-  padding: 0.625rem 0.875rem;
+  padding: 0.5rem 0.75rem;
 }
 
 .profile__person {
-  font-size: 1.0625rem;
+  font-size: 1rem;
   font-weight: 600;
   letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 
 .profile__facts {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0.375rem;
-  margin: 0.25rem 0 0;
+  margin: 0.125rem 0 0;
 }
 
 .profile__fact {
@@ -273,6 +290,7 @@ onBeforeUnmount(() => {
   font-size: 0.9375rem;
   font-weight: 500;
   line-height: 1.25;
+  overflow-wrap: anywhere;
   color: var(--ink);
 }
 
@@ -298,14 +316,19 @@ onBeforeUnmount(() => {
 
 .run__status {
   min-height: 1.5rem;
-  padding-block: 0.625rem 0.5rem;
+  padding-block: 0.5rem 0.625rem;
   font-size: 0.875rem;
   text-align: center;
   color: var(--muted);
 }
 
 .run__foot {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  background-color: var(--paper);
+  border-top: 1px solid var(--rule);
 }
 
 .run__next {

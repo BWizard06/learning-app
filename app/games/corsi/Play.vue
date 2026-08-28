@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { GameFinishPayload } from '~/composables/useGameSession'
-import type { CorsiPayload } from './generator'
+import type { BlockSpot, CorsiPayload } from './generator'
 import { BLOCKS, BLOCK_RATIO, BOARD_ASPECT } from './generator'
 import definition from './definition'
 
@@ -42,8 +42,7 @@ const verdict = computed(() => {
 
 const boardStyle = computed(() => ({ aspectRatio: `1 / ${BOARD_ASPECT}` }))
 
-function blockStyle(index: number) {
-  const spot = BLOCKS[index]!
+function blockStyle(spot: BlockSpot) {
   return {
     left: `${spot.x * 100}%`,
     top: `${spot.y * 100}%`,
@@ -71,7 +70,11 @@ function stateOf(index: number): string {
 }
 
 function labelOf(index: number): string {
-  return `Feld ${index + 1}`
+  const badge = badgeOf(index)
+  if (!badge) return `Feld ${index + 1}`
+  return locked.value
+    ? `Feld ${index + 1}, richtige Position ${badge}`
+    : `Feld ${index + 1}, getippt als Nummer ${badge}`
 }
 
 let rafHandle = 0
@@ -172,7 +175,7 @@ onBeforeUnmount(() => {
             type="button"
             class="board__block tap"
             :class="stateOf(index)"
-            :style="blockStyle(index)"
+            :style="blockStyle(spot)"
             :disabled="!answering"
             :aria-label="labelOf(index)"
             :aria-pressed="taps.includes(index)"
