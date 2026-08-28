@@ -74,3 +74,122 @@ sind `mischung` und `grundwert` ausgeschlossen, weil sie dort keinen sinnvollen 
 ganzzahlig und nicht negativ, jeder Prozentwert liegt zwischen 0 und 100, die Arithmetik jedes
 einzelnen Aufgabentyps wird unabhaengig nachgerechnet, und der Zahlenraum waechst nachweislich
 mit der Schwierigkeit.
+
+---
+
+## zahlenreihen, Zahlenreihen
+
+**Konstrukt** Logisches Denken
+**Modus** `sprint`, 120 Sekunden
+**Schwierigkeit** 1 bis 12
+**Gewicht** linear von 1.0 auf 3.2
+**Schwellen** `raw1: 1.5`, `raw4: 7`, `raw6: 16`
+
+**Eingabe** Ziffernblock mit Vorzeichenwechsel, ganzzahlige Loesungen.
+
+**Zwoelf Bildungsgesetze**, jedes ein eigener `item_type`: `konstante-differenz`,
+`konstanter-faktor`, `alternierende-schritte`, `zweite-differenz`, `differenzreihe`,
+`verschachtelt`, `fibonacci-artig`, `quadratzahlen-versatz`, `kubikzahlen-versatz`,
+`mult-add-wechsel`, `mult-plus-konstante`, `primzahl-versatz`.
+
+**Schwierigkeitsachse** steuert dreierlei: welche Gesetze ueberhaupt vorkommen (auf den untersten
+Stufen nur die drei einfachen), den Zahlenraum, und ob negative Terme und groessere Faktoren
+auftreten. Jeder Term und die Loesung bleiben innerhalb von plus minus 100000.
+
+**Das eigentliche Qualitaetsproblem bei Zahlenreihen ist Mehrdeutigkeit**: eine Reihe, auf die
+auch ein einfacheres Gesetz passt, hat zwei vertretbare Antworten und misst dann nichts. Dagegen
+laufen drei unabhaengige Tests, die im Testfile selbst nachrechnen und nicht die Generatorlogik
+wiederverwenden: keine gezeigte Reihe darf zusaetzlich durch eine konstante Differenz erklaerbar
+sein, keine durch einen konstanten Faktor, und keine durch eine konstante zweite Differenz, die
+auf einen anderen naechsten Wert zeigt. Dazu kommt eine Mindestanzahl gezeigter Terme pro Gesetz.
+
+**Punkteberechnung** gewichteter Durchsatz. Kennwerte: `attempted`, `correct`, `medianRtMs`,
+`meanDifficulty`.
+
+---
+
+## wortfluss, Wortflüssigkeit
+
+**Konstrukt** Wortfluessigkeit
+**Modus** `sprint`, 60 Sekunden
+**Schwierigkeit** 1 bis 3
+**Gewicht** linear von 1.0 auf 1.6
+**Schwellen** `raw1: 2`, `raw4: 11`, `raw6: 22`
+
+**Drei Aufgabenformen**, an die Schwierigkeit gekoppelt: `buchstabe` (alle Woerter mit einem
+vorgegebenen Anfangsbuchstaben), `kategorie` (alle Woerter aus einer Kategorie), `kombiniert`
+(Kategorie und Anfangsbuchstabe zugleich).
+
+**Eingabe** das einzige Spiel mit einem echten Textfeld statt Ziffernblock. Schriftgroesse
+mindestens 16 px, damit iOS nicht zoomt, Autokorrektur und Autokapitalisierung aus.
+
+**Zaehlung** rein strukturell, weil bewusst keine Wortliste im Projekt liegt. Geprueft wird:
+mindestens drei Zeichen, nur Buchstaben inklusive Umlauten und Bindestrich, keine Dublette ohne
+Ruecksicht auf Gross- und Kleinschreibung, und bei `buchstabe` und `kombiniert` der geforderte
+Anfangsbuchstabe. Abgelehnte Eingaben nennen den Grund und werden nicht gezaehlt.
+
+**Was bewusst nicht geprueft wird:** ob ein Wort wirklich in die Kategorie gehoert und ob es
+ueberhaupt ein Wort ist. Ohne Lexikon geht das nicht, und die Oberflaeche sagt das in einem Satz.
+Die Zahl ist damit eine Selbstauskunft, kein Testwert. Eine frei lizenzierte deutsche Wortliste
+wuerde beides freischalten, sie ist der billigste Nachschlag im ganzen Projekt.
+
+Die Wortpruefung akzeptiert absichtlich auch `ß`, weil das eine gueltige Eingabe ist. Die
+Schweizer Schreibweise gilt fuer die Texte der App, nicht fuer das, was du tippen darfst.
+
+**Punkteberechnung** angenommene Woerter pro Minute, gewichtet. Kennwerte: `accepted`,
+`rejected`, `uniqueCount`, `meanRtMs`.
+
+---
+
+## d2, Durchstreichtest
+
+**Konstrukt** Konzentrationsleistung
+**Modus** `block`, zehn Zeilen, Zeit wird gemessen
+**Schwierigkeit** 1 bis 6
+**Gewicht** linear von 1.0 auf 2.0
+**Schwellen** `raw1: 8`, `raw4: 30`, `raw6: 60`
+
+Nachgebaut ist das **Paradigma** aus der Fachliteratur, nicht das kommerzielle Testkit. Keine
+Originalmaterialien, keine Normtabellen, keine Testboegen. Alle Zeichen werden erzeugt.
+
+**Aufgabenformat** jedes Zeichen ist ein d oder ein p mit ein bis vier Strichen ueber und unter
+dem Buchstaben. Ziel ist ausschliesslich: **d mit genau zwei Strichen**, gleich ob zwei oben,
+zwei unten oder je einer. Die Zielquote liegt bei rund 45 Prozent. Die klassischen Verwechslungen
+sind bewusst haeufig: d mit einem, drei oder vier Strichen, und p mit genau zwei.
+
+**Bedienung** eine Zeile auf einmal, 16 bis 24 Zeichen je nach Schwierigkeit. Antippen markiert
+und hebt die Markierung wieder auf, ein Fehler laesst sich also vor dem Abschluss korrigieren.
+«Zeile fertig» schliesst die Zeile ab. Gemessen: 48 mal 60 px pro Zeichen, kein horizontales
+Scrollen.
+
+**Kennwerte**, und die sind der eigentliche Zweck des Spiels: `treffer`, `auslassungen`
+(uebersehene Ziele), `verwechslungen` (markierte Nichtziele), `bearbeitet`, `fehlerprozent` und
+`schwankungsbreite` als Spanne zwischen schnellster und langsamster Zeile. Genau die
+Schwankungsbreite ist das, was Konzentration von blossem Tempo unterscheidet.
+
+**Punkteberechnung** Treffer minus Fehler pro Minute, gewichtet, nach unten bei null begrenzt.
+
+---
+
+## symbolzahl, Zahlen-Symbol
+
+**Konstrukt** Konzentrationsleistung
+**Modus** `sprint`, 90 Sekunden
+**Schwierigkeit** 1 bis 4
+**Gewicht** linear von 1.0 auf 1.5
+**Schwellen** `raw1: 8`, `raw4: 26`, `raw6: 50`
+
+**Aufgabenformat** eine Legende ordnet neun erzeugte SVG-Zeichen den Ziffern 1 bis 9 zu und
+bleibt die ganze Zeit sichtbar. Darunter erscheint ein Zeichen nach dem anderen, eingegeben wird
+die passende Ziffer. Ein Tastendruck ist eine Antwort, ohne Bestaetigung.
+
+**Die Legende wird pro Session neu gewuerfelt**, damit sie sich nicht ueber Wochen einpraegt,
+muss aber innerhalb einer Session unveraendert bleiben. Sie wird deshalb aus `rng.seed` abgeleitet
+und nicht aus `rng.next()`, denn dessen Zustand wandert von Item zu Item weiter. Ein Test ruft
+`generate` viele Male mit demselben Rng auf und prueft, dass die Permutation sich nie aendert.
+
+**Schwierigkeitsachse** wie aehnlich sich die verwendeten Zeichen sehen, und ob die Legende in
+Ziffernreihenfolge steht oder gemischt ist.
+
+**Punkteberechnung** richtige Zuordnungen pro Minute, gewichtet. Kennwerte: `attempted`,
+`correct`, `medianRtMs`, `meanRtMs`.
