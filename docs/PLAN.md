@@ -12,6 +12,8 @@ Person. Ursprung ist die Vorbereitung auf die schriftliche Faehigkeitspruefung d
 Bachelorstudiengangs Angewandte Psychologie an der ZHAW; danach laeuft sie als dauerhaftes
 Gehirntraining weiter.
 
+Code enthaelt **keine Kommentare**. Namen und Struktur tragen die Erklaerung.
+
 Oberflaeche und Inhalte durchgehend **Deutsch, Schweizer Rechtschreibung** (kein ss-Ersatzzeichen,
 immer ss; keine Gedankenstriche in Fliesstexten der Oberflaeche). Code, Kommentare,
 Variablennamen und Commit-Messages **Englisch**.
@@ -508,7 +510,12 @@ sind durch `matrizen` und `symbolzahl` ersetzt.
 - [ ] Hinweis sichtbar, dass die Note kein ZHAW-Ergebnis vorhersagt und welche zwei Konstrukte fehlen
 - [ ] `npm run test:full` gruen
 
-### Phase 3: PWA, Offline und Deployment (Zwischenstopp)
+### Phase 3: PWA, Offline und Deployment-Artefakte (Zwischenstopp)
+
+**Abgrenzung:** In dieser Phase entstehen alle Artefakte, die fuer den Betrieb auf kumo noetig
+sind. **Ausgefuehrt wird auf kumo nichts.** Kein SSH, kein Build, keine Aenderung an Authelia,
+keine Swap-Datei, kein Cloudflare-Record. Die Inbetriebnahme machen wir spaeter gemeinsam Schritt
+fuer Schritt anhand von `docs/DEPLOY.md`.
 
 **Dateien**
 
@@ -517,44 +524,44 @@ sind durch `matrizen` und `symbolzahl` ersetzt.
 - `Dockerfile`, `deploy/compose.yaml`, `deploy/.env.example`, `docs/DEPLOY.md`
 - Playwright: `e2e/offline-sync.spec.ts`, `e2e/games/*.spec.ts`
 
-**Server-Arbeiten auf kumo** (nach dem Runbook)
+**Was `docs/DEPLOY.md` enthaelt** (als Anleitung fuer dich, nicht als ausgefuehrte Schritte)
 
 1. Cloudflare A-Record `learning` auf kumos IP, proxied (orange)
 2. `mkdir -p /opt/kumo/services/apps/learning-app`
 3. Deploy Key auf kumo erzeugen, oeffentlichen Teil als Read-only Deploy Key im GitHub-Repo hinterlegen, Repo klonen
 4. `compose.yaml` mit `build: .`, `image: learning-app:<version>`, `container_name: learning-app`, `restart: unless-stopped`, `TZ=Europe/Zurich`, Volume `./data:/data`, `user: "1001:1001"`, Netzwerk `proxy`, Healthcheck, Traefik-Labels inklusive `middlewares=authelia@docker`. **Kein `ports:`-Block**
    *(`1001:1001` weil `ben` auf kumo uid 1001 hat, der Standarduser im Node-Image aber 1000. Genau die Falle, die bei LLDAP zugeschlagen hat: Container-UID muss zum Besitzer der gemounteten Dateien passen, sonst Permission denied auf `./data`.)*
-5. Authelia `access_control`-Regel fuer `learning.braendle.tech` ergaenzen, Authelia neu starten
-6. Swap-Datei anlegen, falls noch keine da ist, danach `docker compose build && docker compose up -d`
+5. Authelia `access_control`-Regel fuer `learning.braendle.tech` ergaenzen, Authelia neu starten.
+   **Ohne diese Regel liefert die Domain wegen `default_policy: deny` einen harten 403, ohne Login.**
+6. Speicher pruefen, gegebenenfalls Swap anlegen, danach `docker compose build && docker compose up -d`
 7. Uptime-Kuma-Monitor auf `http://learning-app:3000/api/health`, 60 s, Retries 2, ntfy-Benachrichtigung an
+8. Verify-Checkliste nach Runbook
 
-**Zwei Punkte zum Build auf kumo**, weil du dich bewusst dafuer entschieden hast: der Nuxt-Build
-laeuft neben Traefik, Authelia, Redis, LLDAP, Beszel, Dozzle, ntfy und Uptime Kuma auf 4 GB. Ich
-lege deshalb eine Swap-Datei an und setze im Builder-Stage ein Speicherlimit fuer Node. Falls es
-trotzdem eng wird, ist der Ausweg billig: im `compose.yaml` `build: .` durch ein
-`image: ghcr.io/...` ersetzen, sonst aendert sich nichts. Das Dockerfile funktioniert fuer beide
-Wege.
+**Zum Build auf kumo**, weil du dich bewusst dafuer entschieden hast: der Nuxt-Build laeuft neben
+Traefik, Authelia, Redis, LLDAP, Beszel, Dozzle, ntfy und Uptime Kuma auf 4 GB. Das Dockerfile
+setzt im Builder-Stage deshalb ein Speicherlimit fuer Node, und `docs/DEPLOY.md` beschreibt, wie
+du vorher pruefst, ob Swap noetig ist. Falls es trotzdem eng wird, ist der Ausweg billig: im
+`compose.yaml` `build: .` durch ein `image: ghcr.io/...` ersetzen, sonst aendert sich nichts. Das
+Dockerfile funktioniert fuer beide Wege.
 
-**Dokumentation im Second Brain**, nach deiner Hub-and-Spoke-Konvention:
-
-- `Knowledge/kumo - learning-app.md` als Service-Sub-Seite
-- Verlinkung im Services-Hub in `Knowledge/kumo Server Runbook.md`
-- `Dev Logs/2026-XX-XX - VPS learning-app.md`
-- Nachtrag in `Projects/VPS Infrastructure.md` unter Overview und Recent Activity
-- `Projects/Learning App.md` als eigene Projektnotiz
-- Deutsche Drive-Datei `08-learning-app.md` als generierte Kopie
+**Dokumentation im Second Brain** entsteht **nicht jetzt**, sondern beim gemeinsamen Deployment,
+weil deine Vault-Konvention den IST-Zustand dokumentiert und den gibt es vorher nicht. Geplant
+sind dann: `Knowledge/kumo - learning-app.md`, Verlinkung im Services-Hub des Runbooks,
+`Dev Logs/<Datum> - VPS learning-app.md`, Nachtrag in `Projects/VPS Infrastructure.md`, eine
+Projektnotiz und die deutsche Drive-Datei `08-learning-app.md`.
 
 **Akzeptanzkriterien**
 
-- [ ] App auf dem Handy installierbar, startet offline
+- [ ] App lokal als PWA installierbar, startet offline
 - [ ] Playwright-Offline-Test: Netzwerk aus, Session absolvieren, Netzwerk an, Synchronisation belegt
 - [ ] Doppeltes Senden derselben Session erzeugt keinen zweiten Datensatz
-- [ ] Abgelaufene Authelia-Sitzung fuehrt nachweislich **nicht** zu Datenverlust, Banner erscheint, nach Login wird nachsynchronisiert
-- [ ] `https://learning.braendle.tech` → Authelia-Login → App laedt, gueltiges Zertifikat
-- [ ] Uptime-Kuma-Monitor gruen, Container in Beszel und Dozzle sichtbar
-- [ ] Vault-Notizen geschrieben und verlinkt
+- [ ] Simulierte abgelaufene Sitzung (302 auf HTML, 401) fuehrt nachweislich **nicht** zu Datenverlust, Banner erscheint, nach Login wird nachsynchronisiert
+- [ ] `docker build` erzeugt lokal ein lauffaehiges Image, Healthcheck antwortet
+- [ ] `docs/DEPLOY.md` vollstaendig: Setup, Umgebungsvariablen, Update-Weg, Rueckbau
+- [ ] `npm run test:full` gruen
 
 **Hier ist der ausdrueckliche Zwischenstopp. Ich frage nach, bevor es weitergeht.**
+
 
 ### Phase 4: Katalog
 
@@ -651,5 +658,6 @@ Die vier echten ZHAW-Regeln werden in jedem Fall implementiert und getestet:
    zeige sie dir, bevor 21 weitere Spiele darauf aufsetzen.
 2. **Phase 6, Weg 6a oder 6b.** Entscheidung faellt am Ende von Phase 5, nicht jetzt.
 3. **Schriftwahl** Space Grotesk und JetBrains Mono, zur Abnahme mit dem Design-Screen.
-4. **Swap auf kumo.** Ich pruefe beim Deployment, ob bereits Swap existiert, und lege sonst eine
-   Datei an. Das ist eine reversible Aenderung am Server, ich sage vorher Bescheid.
+4. **Inbetriebnahme auf kumo** ist ausdruecklich nicht Teil dieser Arbeit. Ich baue die App und
+   liefere die Deployment-Artefakte; den Server fasse ich nicht an. Das machen wir spaeter
+   gemeinsam Schritt fuer Schritt.
