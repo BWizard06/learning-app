@@ -70,6 +70,16 @@ interface Trial<TPayload = unknown, TAnswer = JsonValue> {
 `Rng` bietet `next`, `int(min,max)`, `float`, `bool(p)`, `pick`, `weighted`, `shuffle`,
 `sample(items,n)`, `sign`, `pickIndex`.
 
+## Spannenverfahren
+
+Spiele mit `mode: 'span'` implementieren die Spannenlogik **nicht selbst**. Die Engine erledigt
+sie ueber `shared/span.ts`: zwei Versuche pro Laenge, die Laenge waechst sobald einer davon
+stimmt, und der Durchgang endet nach zwei gescheiterten Laengen in Folge. Die Schwierigkeit **ist**
+die Spannenlaenge.
+
+Der Rohwert ist dort kein Durchsatz, sondern die **hoechste tatsaechlich geloeste Laenge**.
+`engine.span` gibt den Stand aus, `span.reached` ist der Wert fuer `score()`.
+
 ## Rohwert und Note
 
 Ausser bei `span` gilt

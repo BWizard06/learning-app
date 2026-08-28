@@ -2,6 +2,7 @@ import { computed, reactive, readonly, ref, shallowRef } from 'vue'
 import { createRng } from '~~/shared/rng'
 import { isTrialBlock, type GameDefinition, type JsonValue, type RawScore, type Trial, type TrialResult } from '~~/shared/types'
 import { applyStaircase, createStaircase, type StaircaseState } from '~~/shared/adaptive'
+import { advanceSpan as stepSpan, createSpan, type SpanState } from '~~/shared/span'
 
 export type EngineStatus = 'idle' | 'running' | 'finished'
 
@@ -19,9 +20,6 @@ export interface Feedback {
   expected: JsonValue
   received: JsonValue
 }
-
-const SPAN_TRIALS_PER_LENGTH = 2
-const SPAN_FAILURES_TO_STOP = 2
 
 function defaultIsCorrect(trial: Trial, response: JsonValue): boolean {
   if (trial.correctIndex !== undefined) return response === trial.correctIndex
@@ -64,9 +62,7 @@ export function useEngine(options: EngineOptions) {
   )
   const difficultyHistory: number[] = []
 
-  const spanFailuresAtLength = ref(0)
-  const spanTrialsAtLength = ref(0)
-  const spanCorrectAtLength = ref(0)
+  const span = ref<SpanState>(createSpan(Math.min(hi, Math.max(lo, options.startDifficulty ?? lo))))
 
   let perfStart = 0
   let wallStart = 0
@@ -166,24 +162,9 @@ export function useEngine(options: EngineOptions) {
   }
 
   function advanceSpan(correct: boolean) {
-    spanTrialsAtLength.value++
-    if (correct) spanCorrectAtLength.value++
-
-    if (spanTrialsAtLength.value < SPAN_TRIALS_PER_LENGTH) return true
-
-    if (spanCorrectAtLength.value === 0) {
-      spanFailuresAtLength.value++
-    } else {
-      spanFailuresAtLength.value = 0
-      staircase.value = {
-        difficulty: Math.min(hi, staircase.value.difficulty + 1),
-        correctStreak: 0,
-      }
-    }
-
-    spanTrialsAtLength.value = 0
-    spanCorrectAtLength.value = 0
-    return spanFailuresAtLength.value < SPAN_FAILURES_TO_STOP
+    span.value = stepSpan(span.value, correct, hi)
+    staircase.value = { difficulty: span.value.length, correctStreak: 0 }
+    return !span.value.finished
   }
 
   function record(trial: Trial, response: JsonValue, correct: boolean, rtMs: number) {
@@ -270,6 +251,7 @@ export function useEngine(options: EngineOptions) {
     difficulty,
     accuracy,
     difficultyHistory,
+    span,
     seed: options.seed,
     durationS,
     start,
