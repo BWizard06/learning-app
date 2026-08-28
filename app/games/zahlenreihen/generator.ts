@@ -212,9 +212,10 @@ function alternierendeSchritte(rng: Rng, difficulty: number): Candidate | null {
   const stepB = variant === 1 || variant === 2 ? second : -second
   if (stepA === stepB) return null
   if (stepA + stepB === 0) return null
-  if (stepA > 0 === stepB > 0) {
+  if ((stepA > 0) === (stepB > 0)) {
+    const larger = Math.max(Math.abs(stepA), Math.abs(stepB))
     const gap = Math.abs(Math.abs(stepA) - Math.abs(stepB))
-    if (gap < Math.max(2, 0.25 * Math.max(Math.abs(stepA), Math.abs(stepB)))) return null
+    if (gap < Math.max(2, 0.25 * larger)) return null
   }
   const relative: number[] = [0]
   for (let i = 0; i < shown; i++) relative.push(relative[i]! + (i % 2 === 0 ? stepA : stepB))

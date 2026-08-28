@@ -193,3 +193,40 @@ Ziffernreihenfolge steht oder gemischt ist.
 
 **Punkteberechnung** richtige Zuordnungen pro Minute, gewichtet. Kennwerte: `attempted`,
 `correct`, `medianRtMs`, `meanRtMs`.
+
+---
+
+## matrizen, Matrizen
+
+**Konstrukt** Logisches Denken
+**Modus** `sprint`, 180 Sekunden
+**Schwierigkeit** 1 bis 10
+**Gewicht** linear von 1.0 auf 3.0
+**Schwellen** `raw1: 0.8`, `raw4: 3.5`, `raw6: 8`
+
+**Aufgabenformat** ein 3x3-Raster aus erzeugten SVG-Feldern nach Raven-Prinzip, das Feld unten
+rechts fehlt, sechs Antwortoptionen. Die Regeln greifen zeilen- **und** spaltenweise.
+
+**Merkmale je Feld**: `shape`, `count`, `fill`, `rotation`, `size`.
+**Regelarten**: `konstant`, `konstant-in-zeile`, `progression` (fester Schritt entlang der Zeile)
+und `verteilung` (jeder von drei Werten kommt genau einmal pro Zeile und pro Spalte vor).
+`count` und `rotation` koennen zusaetzlich als Progression laufen.
+
+**Schwierigkeitsachse** wie viele Merkmale ueberhaupt eine Regel tragen, von einem auf der
+untersten Stufe bis drei auf der obersten. Die schwerere `verteilung` erscheint erst ab Stufe
+vier.
+
+**Die Distraktoren sind der heikle Teil.** Jede der fuenf falschen Optionen entsteht daraus, dass
+genau ein regeltragendes Merkmal auf einen Wert gesetzt wird, der unter einer **falschen aber
+naheliegenden Lesart** richtig waere: der Wert aus der Zeile darueber, der Wert aus dem linken
+Nachbarn, der naechste statt des aktuellen Progressionsschritts, oder der wiederholte Wert des
+Vorgaengers. Nie ein Zufallswert.
+
+**Was die Tests wirklich pruefen**, unabhaengig von der Generatorlogik: dass die richtige Option
+jede Regel sowohl in ihrer Zeile als auch in ihrer Spalte erfuellt, dass alle sechs
+Merkmalsvektoren verschieden sind, dass jeder Distraktor sich in genau einem regeltragenden
+Merkmal unterscheidet, und dass jeder moegliche Merkmalsvektor ein optisch unterscheidbares SVG
+ergibt. Der letzte Punkt ist wichtig, weil zwei verschiedene Vektoren sonst identisch aussehen
+koennten und die Aufgabe zwei richtige Antworten haette.
+
+**Punkteberechnung** gewichteter Durchsatz. Kennwerte wie bei den uebrigen Sprintspielen.

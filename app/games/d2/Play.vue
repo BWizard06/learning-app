@@ -75,6 +75,8 @@ function finishRow() {
 
 function onKeydown(event: KeyboardEvent) {
   if (event.key !== 'Enter' || locked.value) return
+  const origin = event.target as HTMLElement | null
+  if (origin && typeof origin.closest === 'function' && origin.closest('button')) return
   finishRow()
   event.preventDefault()
 }

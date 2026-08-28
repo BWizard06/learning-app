@@ -29,17 +29,64 @@ describe('wortfluss generator', () => {
     })
   })
 
+  it('names one fixed prompt kind per level', () => {
+    expect(itemTypeFor(1)).toBe('buchstabe')
+    expect(itemTypeFor(2)).toBe('kategorie')
+    expect(itemTypeFor(3)).toBe('kombiniert')
+    expect(itemTypeFor(-4)).toBe('buchstabe')
+    expect(itemTypeFor(12)).toBe('kombiniert')
+  })
+
   it('maps every difficulty to its prompt kind', () => {
     const runs = propertyRuns()
+    const expected: ItemType[] = ['buchstabe', 'kategorie', 'kombiniert']
     const seen = new Set<ItemType>()
     for (let i = 0; i < runs; i++) {
       const difficulty = (i % 3) + 1
       const trial = generateWortfluss(difficulty, createRng(i * 2654435761 + 11))
       seen.add(trial.itemType as ItemType)
-      expect(trial.itemType).toBe(itemTypeFor(difficulty))
+      expect(trial.itemType).toBe(expected[difficulty - 1])
+      expect(trial.params.type).toBe(trial.itemType)
       expect(trial.difficulty).toBe(difficulty)
     }
     expect(seen).toEqual(new Set(ITEM_TYPES))
+  })
+
+  it('rebuilds the exact prompt from the parameters alone', () => {
+    const runs = propertyRuns()
+    for (let i = 0; i < runs; i++) {
+      const trial = generateWortfluss((i % 3) + 1, createRng(i * 40503 + 19))
+      const payload = trial.payload as WortflussPayload
+      const params = trial.params as {
+        type: ItemType
+        letterIndex: number | null
+        categoryIndex: number | null
+      }
+      const letter = params.letterIndex === null ? null : LETTERS[params.letterIndex]!
+      const category = params.categoryIndex === null ? null : CATEGORIES[params.categoryIndex]!
+
+      let rebuilt: string
+      if (params.type === 'buchstabe') rebuilt = `Wörter mit ${letter!.toUpperCase()}`
+      else if (params.type === 'kategorie') rebuilt = `Wörter aus der Kategorie ${category}`
+      else rebuilt = `${category} mit ${letter!.toUpperCase()}`
+
+      expect(payload.prompt).toBe(rebuilt)
+      expect(payload.letter).toBe(letter)
+      expect(payload.category).toBe(category)
+    }
+  })
+
+  it('reaches every letter and every category', () => {
+    const letters = new Set<string>()
+    const categories = new Set<string>()
+    for (let i = 0; i < 1500; i++) {
+      const payload = generateWortfluss((i % 3) + 1, createRng(i * 2246822519 + 29))
+        .payload as WortflussPayload
+      if (payload.letter !== null) letters.add(payload.letter)
+      if (payload.category !== null) categories.add(payload.category)
+    }
+    expect(letters.size).toBe(LETTERS.length)
+    expect(categories.size).toBe(CATEGORIES.length)
   })
 
   it('carries letter and category exactly where the prompt kind needs them', () => {

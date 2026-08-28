@@ -20,6 +20,16 @@ import {
 
 const DIFFICULTIES = [1, 2, 3, 4, 5, 6]
 
+const TARGET_FORMS = ['d20', 'd11', 'd02']
+
+function form(char: D2Char): string {
+  return `${char.letter}${char.above}${char.below}`
+}
+
+function shouldBeTarget(char: D2Char): boolean {
+  return TARGET_FORMS.includes(form(char))
+}
+
 function rowFor(index: number, salt: number): { chars: D2Char[]; targets: number[]; difficulty: number } {
   const difficulty = DIFFICULTIES[index % DIFFICULTIES.length]!
   const trial = generateRow(difficulty, createRng(index * salt + 1))
@@ -78,7 +88,7 @@ describe('d2 generator', () => {
       const declared = new Set(targets)
       for (let index = 0; index < chars.length; index++) {
         if (declared.has(index)) continue
-        if (isTarget(chars[index]!)) missed.push(chars[index]!)
+        if (shouldBeTarget(chars[index]!)) missed.push(chars[index]!)
       }
     }
     expect(missed).toEqual([])
@@ -88,7 +98,7 @@ describe('d2 generator', () => {
     const runs = propertyRuns()
     for (let i = 0; i < runs; i++) {
       const { chars, targets } = rowFor(i, 15485863)
-      const recomputed = chars.map((char, index) => (isTarget(char) ? index : -1)).filter((v) => v >= 0)
+      const recomputed = chars.map((char, index) => (shouldBeTarget(char) ? index : -1)).filter((v) => v >= 0)
       expect(targets).toEqual(recomputed)
       expect(new Set(targets).size).toBe(targets.length)
     }
@@ -116,6 +126,29 @@ describe('d2 generator', () => {
     }
     expect(invalid).toEqual([])
     expect(shapes.size).toBe(16)
+  })
+
+  it('scatters the targets over every position of the row', () => {
+    for (const difficulty of DIFFICULTIES) {
+      const rows = 1500
+      const length = rowLengthFor(difficulty)
+      const hits = new Array<number>(length).fill(0)
+      let meanPosition = 0
+
+      for (let i = 0; i < rows; i++) {
+        const trial = generateRow(difficulty, createRng(i * 2246822519 + 7))
+        expect(trial.payload.length).toBe(length)
+        for (const index of trial.answer) hits[index]!++
+        meanPosition +=
+          trial.answer.reduce((sum, index) => sum + index / (length - 1), 0) / trial.answer.length
+      }
+
+      const shares = hits.map((count) => count / rows)
+      expect(Math.min(...shares)).toBeGreaterThan(0.33)
+      expect(Math.max(...shares)).toBeLessThan(0.56)
+      expect(meanPosition / rows).toBeGreaterThan(0.46)
+      expect(meanPosition / rows).toBeLessThan(0.54)
+    }
   })
 
   it('mirrors the payload in params so the row can be reconstructed', () => {
@@ -240,6 +273,60 @@ describe('d2 scoring', () => {
     expect(score.accuracy).toBe(0)
     expect(score.metrics.bearbeitet).toBe(0)
     expect(score.metrics.schwankungsbreite).toBe(0)
+  })
+
+  it('charges an omission twice as much as a wrong mark', () => {
+    const trial = generateRow(5, createRng(2024))
+    const nonTarget = trial.payload.findIndex((char) => !isTarget(char))
+    const rowResult = (marked: number[]): TrialResult => ({
+      idx: 0,
+      itemType: trial.itemType,
+      difficulty: 5,
+      params: trial.params,
+      response: marked,
+      correct: false,
+      rtMs: 10000,
+      presentedAt: 0,
+    })
+
+    const flawless = definition.score([rowResult(trial.answer)], 60).raw
+    const oneMissed = definition.score([rowResult(trial.answer.slice(1))], 60).raw
+    const oneExtra = definition.score([rowResult([...trial.answer, nonTarget])], 60).raw
+
+    const unit = flawless / trial.answer.length
+    expect(flawless - oneExtra).toBeCloseTo(unit, 10)
+    expect(flawless - oneMissed).toBeCloseTo(2 * unit, 10)
+    expect(oneMissed).toBeLessThan(oneExtra)
+  })
+
+  it('ignores duplicate and out of range marks in a response', () => {
+    const trial = generateRow(4, createRng(4321))
+    const length = trial.payload.length
+    const noisy = [...trial.answer, ...trial.answer, -1, length, length + 500, 2.5]
+
+    expect(definition.isCorrect!(trial, noisy)).toBe(true)
+
+    const score = definition.score(
+      [
+        {
+          idx: 0,
+          itemType: trial.itemType,
+          difficulty: 4,
+          params: trial.params,
+          response: noisy,
+          correct: true,
+          rtMs: 10000,
+          presentedAt: 0,
+        },
+      ],
+      60,
+    )
+
+    expect(score.metrics.treffer).toBe(trial.answer.length)
+    expect(score.metrics.auslassungen).toBe(0)
+    expect(score.metrics.verwechslungen).toBe(0)
+    expect(score.metrics.bearbeitet).toBe(length)
+    expect(score.accuracy).toBe(1)
   })
 
   it('accepts a row only when the marked set equals the target set', () => {

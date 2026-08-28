@@ -1,6 +1,7 @@
 import type { Construct, GameDefinition } from '~~/shared/types'
 import kopfrechnen from './kopfrechnen/definition'
 import zahlenreihen from './zahlenreihen/definition'
+import matrizen from './matrizen/definition'
 import wortfluss from './wortfluss/definition'
 import d2 from './d2/definition'
 import symbolzahl from './symbolzahl/definition'
@@ -15,7 +16,7 @@ export const CONSTRUCT_ORDER: Construct[] = [
   'text',
 ]
 
-export const games: GameDefinition[] = [kopfrechnen, zahlenreihen, wortfluss, d2, symbolzahl].sort((a, b) => {
+export const games: GameDefinition[] = [kopfrechnen, zahlenreihen, matrizen, wortfluss, d2, symbolzahl].sort((a, b) => {
   const byConstruct = CONSTRUCT_ORDER.indexOf(a.construct) - CONSTRUCT_ORDER.indexOf(b.construct)
   if (byConstruct !== 0) return byConstruct
   return a.name.localeCompare(b.name, 'de-CH')
