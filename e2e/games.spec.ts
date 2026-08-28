@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { games } from '../app/games/index'
-import { startGame, storedSessions, waitForResult } from './helpers'
+import { startGame, storedSessions, tapTrailInOrder, waitForResult } from './helpers'
 
 test.describe('catalogue', () => {
   test('lists every registered game and links to it', async ({ page }) => {
@@ -27,9 +27,18 @@ for (const game of games) {
       const before = await storedSessions(page, game.slug)
       await startGame(page, game.slug, '?dauer=6&items=1')
 
-      const deadline = Date.now() + 40_000
+      const usesTrail = (await page.locator('.frame button.node').count()) > 0
+
+      const deadline = Date.now() + 60_000
       while (Date.now() < deadline) {
         if (await page.locator('.scoreband').isVisible().catch(() => false)) break
+
+        if (usesTrail) {
+          const tapped = await tapTrailInOrder(page)
+          await page.waitForTimeout(tapped > 0 ? 500 : 200)
+          continue
+        }
+
         const keys = page.locator('.frame button:not([disabled])')
         const count = await keys.count()
         if (count > 0) await keys.nth(count - 1).click({ timeout: 2000 }).catch(() => {})
