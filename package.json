@@ -1,0 +1,45 @@
+{
+  "name": "learning-app",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "test": "vitest run",
+    "test:watch": "PROPERTY_RUNS=300 vitest",
+    "test:full": "PROPERTY_RUNS=10000 vitest run",
+    "e2e": "playwright test",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node server/db/migrate.mjs"
+  },
+  "dependencies": {
+    "@pinia/nuxt": "^1.0.2",
+    "@vite-pwa/nuxt": "^1.1.1",
+    "better-sqlite3": "^13.0.3",
+    "drizzle-orm": "^0.45.2",
+    "idb": "^8.0.3",
+    "nuxt": "^4.5.2",
+    "pinia": "^4.0.3",
+    "uuid": "^14.0.2",
+    "vue": "^3.5.42",
+    "vue-router": "^5.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/better-sqlite3": "^9.6.0",
+    "@vue/test-utils": "^2.5.0",
+    "drizzle-kit": "^0.31.10",
+    "happy-dom": "^20.11.12",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11",
+    "vue-tsc": "^3.3.11"
+  }
+}

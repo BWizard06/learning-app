@@ -30,7 +30,7 @@ sichtbarer Bestehensgrenze bei 4.0.
 | Name | `learning-app`, Subdomain `learning.braendle.tech`, Repo `BWizard06/learning-app`, Serverpfad `/opt/kumo/services/apps/learning-app/` | Neutral beschreibend statt an ein Motiv gebunden; passt zur Ein-Wort-Konvention der uebrigen kumo-Services |
 | Auth | **Nur Authelia**, Fall A aus dem Runbook. Kein eigener Login-Code, keine Passphrase, keine Benutzertabelle | Ein Login, kein zweiter Auth-Pfad, kein selbstgebautes Rate Limit |
 | Authelia-Konfiguration | **Wird nicht angefasst.** Defaults bleiben (1 h Sitzung, 5 min Inaktivitaet) | Kein Eingriff in einen laufenden Dienst, den vier andere Services teilen. Die App faengt abgelaufene Sitzungen selbst sauber ab (siehe 6.3) |
-| Datenbank | SQLite ueber **`node:sqlite`** mit `drizzle-orm/node-sqlite`, **Node 24 LTS** | Abweichung vom Auftrag, siehe 3.1 |
+| Datenbank | SQLite ueber **`better-sqlite3`** mit `drizzle-orm/better-sqlite3`, wie beauftragt. **Node 24 LTS** statt 22 | siehe 3.1 |
 | Deployment | Docker-Image wird **auf kumo gebaut** (`docker compose build`), Quelle per `git clone` aus dem privaten GitHub-Repo | Ein Container wie alle anderen, vollstaendig unabhaengig vom Mac, nahtlos in Beszel, Dozzle und Uptime Kuma |
 | Inhalte | **Keine kuratierten Inhaltsdateien.** Nur Spiele, deren Items sich deterministisch erzeugen lassen | Bewusste Entscheidung, siehe 3.2 und 7 |
 | Backups | **Keine.** Kein VACUUM-INTO-Job, keine Rotation, kein Off-Box-Kopieren | Bewusste Entscheidung. `GET /api/export` bleibt als App-Funktion erhalten, damit du jederzeit selbst exportieren kannst |
@@ -45,23 +45,32 @@ sichtbarer Bestehensgrenze bei 4.0.
 Der Auftrag verlangt ausdruecklich, alle Stellen zu nennen, an denen ich nicht einverstanden bin
 oder eine bessere Loesung sehe. Hier sind sie, absteigend nach Tragweite.
 
-### 3.1 `better-sqlite3` → `node:sqlite` und Node 22 → Node 24 (entschieden)
+### 3.1 ~~`better-sqlite3` → `node:sqlite`~~ zurueckgenommen, Node 22 → Node 24 bleibt
 
-`better-sqlite3` ist ein nativ kompiliertes Modul. Es zwingt jeden Build-Weg in eine
-linux/amd64-Umgebung und macht das Image von einer Build-Toolchain abhaengig, die bei jedem
-Node-Upgrade neu greifen muss.
+**Diese Abweichung ist nach Pruefung zurueckgenommen. Es bleibt bei `better-sqlite3`, wie im
+Auftrag verlangt.** Zwei Gruende, beide beim Verifizieren aufgetaucht:
 
-Node bringt seit 22.5 ein eigenes SQLite mit (`node:sqlite`, `DatabaseSync`), und Drizzle hat
-dafuer einen offiziellen Treiber `drizzle-orm/node-sqlite`. Damit gibt es **null native Module**:
-das Image braucht keinen Compiler, der Build auf kumo wird deutlich leichter, und ein
-Node-Upgrade erzwingt kein Rebuild nativer Bindings. WAL-Modus und `VACUUM INTO` funktionieren
-ueber `exec()` genauso.
+1. Drizzle hat den Treiber `drizzle-orm/node-sqlite` erst in der unveroeffentlichten
+   `1.0.0-rc`-Linie. Die stabile Version 0.45.2 kennt ihn nicht. Auf einem Release Candidate
+   baue ich keine App, die jahrelang laufen soll.
+2. Der eigentliche Grund fuer die Abweichung ist ohnehin entfallen. Ich wollte `better-sqlite3`
+   vermeiden, weil ein auf dem Mac gebautes `.output` eine `darwin-arm64`-Binary enthaelt, die
+   auf Linux nicht startet. Das Image wird aber auf kumo gebaut, also in einem
+   linux/amd64-Container auf linux/amd64-Hardware. Dort ist das native Modul unproblematisch.
 
-Node 24 statt 22, weil `node:sqlite` dort ohne Flag und als stabil gilt. 24 ist ebenfalls LTS,
-also eine Bewegung nach vorn, keine zur Seite. Drizzle und Drizzle Kit bleiben wie beauftragt.
+`better-sqlite3` ist mit Drizzle 0.45.2 auf Node 24 verifiziert: WAL-Pragma, Insert,
+`onConflictDoNothing` als Entsprechung zu `INSERT OR IGNORE`, Select. Der Builder-Stage im
+Dockerfile bringt `python3`, `make` und `g++` mit, damit ein fehlender Prebuild kompiliert werden
+kann; die Runtime-Stage bleibt schlank.
 
-**Risiko:** `node:sqlite` ist juenger und weniger erprobt als `better-sqlite3`. Der Umstieg ist
-aber billig, weil Drizzle die Abstraktion ist; ein Wechsel zurueck betrifft eine Datei.
+**Node 24 statt Node 22** bleibt bestehen, jetzt aber aus einem anderen Grund: 24 ist ebenfalls
+LTS, entspricht der lokalen Entwicklungsumgebung und ist eine Bewegung nach vorn statt zur Seite.
+Kein technischer Zwang, nur Konsistenz. Falls du Node 22 willst, ist das eine Zeile im
+Dockerfile.
+
+**Lernpunkt, festgehalten weil er sich wiederholen kann:** die Doku, auf die ich mich beim
+Vorschlag gestuetzt hatte, beschrieb einen Treiber, den es in keiner veroeffentlichten Version
+gibt. Verifiziert wird ab jetzt gegen `node_modules`, nicht gegen Dokumentation.
 
 ### 3.2 Kein Textverstaendnis, kein Sprachliches Denken (entschieden, mit Vorbehalt dokumentiert)
 
@@ -118,14 +127,17 @@ reproduzierbar und debugbar bleibt. Eine ausdrueckliche Option «Wiederholung mi
 bleibt vorhanden, sichtbar beschriftet, und ein so erzeugtes Ergebnis wird in der Statistik
 markiert und aus Verlaeufen ausgeschlossen.
 
-### 3.5 Property-Tests: 1'000 statt 10'000 im Normalfall (Vorschlag)
+### 3.5 ~~Property-Tests mit 1'000 statt 10'000~~ zurueckgenommen
 
-10'000 Durchlaeufe pro Generator ueber 22 Generatoren machen den Test-Lauf so langsam, dass er
-beim Entwickeln nicht mehr laeuft, und ein Test, der nicht laeuft, findet nichts.
+**Auch diese Abweichung ist nach Messung hinfaellig.** Der Verdacht war, 10'000 Durchlaeufe pro
+Generator machten den Test-Lauf zu langsam fuers Entwickeln. Gemessen am fertigen Referenzspiel
+`kopfrechnen`: sieben Tests mit je 10'000 Durchlaeufen brauchen **667 ms**. Hochgerechnet auf 22
+Generatoren sind das wenige Sekunden.
 
-**Vorschlag:** `npm test` faehrt 1'000 Durchlaeufe pro Generator, `npm run test:full` faehrt
-10'000. Die Anzahl kommt aus einer Umgebungsvariable, die Testdatei ist identisch. Vor jedem
-Phasenabschluss laeuft `test:full`, und nur dessen Ausgabe zaehlt als Beleg.
+`npm test` faehrt deshalb die im Auftrag verlangten **10'000 Durchlaeufe**. `npm run test:watch`
+senkt auf 300 fuer schnelles Feedback beim Tippen, `npm run test:full` ist der explizite
+Vollauf. Sollte ein spaeterer Generator mit viel SVG-Arbeit deutlich langsamer sein, wird das an
+dieser Stelle neu bewertet und nicht still gesenkt.
 
 ### 3.6 `day_log` ist abgeleitet, nicht Quelle (Vorschlag)
 
@@ -152,7 +164,7 @@ Modusschalter, nicht zwei Ordner.
 |---|---|
 | Framework | Nuxt 4, TypeScript, `<script setup>`, Composition API |
 | Server | Nitro Server Routes unter `server/api/` |
-| Datenbank | SQLite via `node:sqlite`, Zugriff ausschliesslich ueber Drizzle ORM |
+| Datenbank | SQLite via `better-sqlite3`, Zugriff ausschliesslich ueber Drizzle ORM |
 | Migrationen | Drizzle Kit, versioniert unter `server/db/migrations/`, beim Containerstart angewendet |
 | Client-State | Pinia (`@pinia/nuxt`) |
 | PWA | `@vite-pwa/nuxt` |
