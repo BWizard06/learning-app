@@ -23,6 +23,7 @@ const grouped = computed(() =>
         <NuxtLink to="/plan" class="home__link home__link--primary tap">Tagesplan</NuxtLink>
         <NuxtLink to="/stats" class="home__link tap">Statistik</NuxtLink>
         <NuxtLink to="/exam" class="home__link tap">Prüfung</NuxtLink>
+        <NuxtLink to="/settings" class="home__link tap" aria-label="Einstellungen">⚙</NuxtLink>
       </nav>
     </header>
 
@@ -62,6 +63,7 @@ const grouped = computed(() =>
 
 .home__nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.5rem;
 }
