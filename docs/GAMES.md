@@ -255,3 +255,139 @@ ergibt. Der letzte Punkt ist wichtig, weil zwei verschiedene Vektoren sonst iden
 koennten und die Aufgabe zwei richtige Antworten haette.
 
 **Punkteberechnung** gewichteter Durchsatz. Kennwerte wie bei den uebrigen Sprintspielen.
+
+---
+
+## stroop, Stroop
+
+**Konstrukt** Konzentrationsleistung
+**Modus** `sprint`, 90 Sekunden
+**Schwierigkeit** 1 bis 4
+**Gewicht** linear von 1.0 auf 1.4
+**Schwellen** `raw1: 10`, `raw4: 34`, `raw6: 62`
+
+**Aufgabenformat** ein Farbwort erscheint in einer Schriftfarbe. Gefragt ist die **Schriftfarbe**,
+nicht das Wort. Vier Farben: rot, gelb, grün, blau. Zwei Aufgabentypen, `kongruent` (Wort und
+Farbe stimmen überein) und `inkongruent` (sie widersprechen sich), im Verhältnis von rund 40 zu 60.
+
+Die Antworttasten tragen den **Farbnamen als Wort** und sind bewusst neutral gefärbt. Wären sie in
+der jeweiligen Farbe eingefärbt, liesse sich die Aufgabe durch blosses Farbabgleichen lösen statt
+durch Benennen, und wer farbenblind ist könnte gar nicht spielen.
+
+**Bezeichner und Beschriftung sind getrennt:** intern heisst die Farbe `gruen`, damit `params`
+ohne Umlaute stabil bleibt, angezeigt wird «grün». Ein Test hält beides auseinander.
+
+**Schwierigkeitsachse** wie viele Farben im Spiel sind (drei auf Stufe 1, danach vier) und wie
+lange ein Wort stehen bleibt (2400 ms herunter auf 1450 ms). **Nicht** welcher Aufgabentyp kommt,
+denn beide müssen auf jeder Stufe auftreten.
+
+**Zeitmessung** ist hier die Messgrösse, nicht Beiwerk. Der Zeitpunkt wird nach `nextTick` in
+einem `requestAnimationFrame` gestempelt, also erst wenn der Reiz wirklich gezeichnet ist, und
+nicht wenn die Daten gesetzt wurden. Kein `setTimeout` in der Komponente.
+
+**Kennwerte:** `kongruentMs` und `inkongruentMs` als Mediane der jeweils richtig beantworteten
+Items, `interferenzMs` als deren Differenz, dazu `kongruentTreffer` und `inkongruentTreffer`.
+Der Interferenzeffekt in Millisekunden ist die eigentliche Kennzahl dieses Paradigmas. Er bleibt
+0, solange ein Typ noch keinen Treffer hat, statt eine Zahl aus dem Nichts zu erfinden.
+
+---
+
+## zeichenvergleich, Zeichenvergleich
+
+**Konstrukt** Konzentrationsleistung
+**Modus** `sprint`, 90 Sekunden
+**Schwierigkeit** 1 bis 6
+**Gewicht** linear von 1.0 auf 2.0
+**Schwellen** `raw1: 8`, `raw4: 26`, `raw6: 50`
+
+**Aufgabenformat** zwei Zeichenreihen übereinander in der Mono-Schrift, zu beantworten mit
+«gleich» oder «verschieden». Rund die Hälfte der Items ist identisch.
+
+**Vier Aufgabentypen**, alle auf jeder Stufe erreichbar: `identisch`, `zifferntausch` (zwei
+benachbarte Zeichen vertauscht), `aehnliche-glyphe` (ein Zeichen durch einen Doppelgänger ersetzt,
+0 gegen O, 1 gegen l, 5 gegen S, 8 gegen B) und `ein-zeichen` (ein Zeichen beliebig ersetzt).
+
+**Schwierigkeitsachse** Länge der Reihen und wie stark der Doppelgänger-Typ gegenüber den
+offensichtlichen gewichtet wird.
+
+**Kennwerte:** `falschGleich` (identisch gesagt, obwohl verschieden) und `falschVerschieden`
+(verschieden gesagt, obwohl identisch). Die Asymmetrie zwischen beiden ist das interessante
+Signal: die erste Sorte heisst übersehen, die zweite heisst übervorsichtig.
+
+---
+
+## gonogo, Go und No-Go
+
+**Konstrukt** Konzentrationsleistung
+**Modus** `sprint`, 120 Sekunden
+**Schwierigkeit** 1 bis 5
+**Gewicht** linear von 1.0 auf 1.6
+**Schwellen** `raw1: 8`, `raw4: 30`, `raw6: 55`
+
+**Aufgabenformat** ein fortlaufender Strom von Buchstaben. Regel: bei jedem Buchstaben tippen,
+nur beim X nicht. Rund 75 Prozent sind Go-Reize, und genau dieses Übergewicht macht das
+Unterdrücken schwer, weil das Tippen zur Gewohnheit wird.
+
+**Vier Ausgänge:** Go mit Tipp ist richtig, Go ohne Tipp ist ein Auslassungsfehler, No-Go mit Tipp
+ist ein Kommissionsfehler, No-Go ohne Tipp ist richtig.
+
+**Die Präsentationsschleife läuft über `requestAnimationFrame`**, nie über `setTimeout`. Läuft
+das Fenster ohne Tipp ab, wird automatisch eine leere Antwort abgeschickt.
+
+**Kennwerte:** `kommissionsfehler`, `omissionsfehler`, `goTreffer`, `nogoTreffer`, `medianRtMs`
+über die Go-Treffer und `rtVariabilitaet` als Standardabweichung derselben. Die Streuung der
+Reaktionszeit ist der klassische Aufmerksamkeitsmarker und sagt mehr als der Mittelwert.
+
+**Getestet auch als Komponente.** `Play.play.test.ts` läuft unter happy-dom und prüft, was ein
+Generator-Test nicht erreicht: dass ohne Tipp von selbst abgeschickt wird, dass ein Tipp ankommt,
+dass die Leertaste wirkt aber eine gehaltene Taste ignoriert wird, und dass das
+Präsentationsfenster zur Schwierigkeitsstufe passt.
+
+---
+
+## trailmaking, Zahlenpfad
+
+**Konstrukt** Konzentrationsleistung
+**Modus** `block`, vier Felder, Zeit wird gemessen
+**Schwierigkeit** 1 bis 5
+**Gewicht** linear von 1.0 auf 2.0
+**Schwellen** `raw1: 0.4`, `raw4: 1.6`, `raw6: 3.2`
+**`scoresCorrectness: false`**, weil jedes Feld am Ende vollständig verbunden ist und eine
+Trefferquote deshalb immer 100 Prozent wäre. Gezählt werden stattdessen die Fehltipps.
+
+**Aufgabenformat** Kreise auf einer Fläche. Teil A verbindet 1 bis n der Reihe nach, Teil B
+wechselt zwischen Zahl und Buchstabe. Ein Fehltipp wird gezählt und markiert, die Reihenfolge
+rückt aber nicht vor, man korrigiert also und macht weiter.
+
+**Die Positionen werden per Verwerfungsstichprobe erzeugt**, mit einem Mindestabstand, damit sich
+keine zwei Kreise überlappen und jeder Kreis auf 375 px mindestens 44 px misst. Ein Test rechnet
+den Mindestabstand unabhängig nach.
+
+**Kennwerte:** `fehler`, `teilAMs` und `teilBMs` als Mediane je Teil, `differenzMs` als deren
+Differenz. Diese Differenz ist das eigentliche Signal, weil Teil B zusätzlich das Umschalten
+zwischen zwei Regeln verlangt.
+
+---
+
+## rechenzeichen, Rechenzeichen einsetzen
+
+**Konstrukt** Rechnerisches Denken
+**Modus** `sprint`, 120 Sekunden
+**Schwierigkeit** 1 bis 6
+**Gewicht** linear von 1.0 auf 2.4
+**Schwellen** `raw1: 1.5`, `raw4: 7`, `raw6: 15`
+
+**Aufgabenformat** eine Gleichung mit Lücken, etwa `6 _ 3 _ 2 = 20`. Die Operatoren werden aus
+plus, minus, mal und geteilt gewählt, Punkt vor Strich gilt. Aufgabentypen nach Anzahl Lücken:
+`zwei-zeichen`, `drei-zeichen`, `vier-zeichen`.
+
+**Die Lösung muss eindeutig sein**, und das ist der ganze Aufwand bei diesem Spiel. Der Generator
+probiert alle Operatorkombinationen durch, wertet jede mit korrekter Vorrangregel aus und behält
+das Item nur, wenn **genau eine** Kombination den Zielwert trifft. Sonst wird verworfen und neu
+gezogen, aus demselben Rng, damit der Generator rein und reproduzierbar bleibt. Division muss auf
+jedem Schritt aufgehen, kein Zwischenergebnis darf gebrochen oder negativ sein.
+
+Der Ausdrucksauswerter ist selbst geschrieben, kein `eval` und kein `Function`.
+
+**Getestet** mit einer unabhängigen Brute-Force-Eindeutigkeitsprüfung über eine grosse Stichprobe
+und einer von Hand geschriebenen Vorrangtabelle (6+3·2=12, 6·3+2=20, 24:6−2=2, 2+3·4−5=9).
