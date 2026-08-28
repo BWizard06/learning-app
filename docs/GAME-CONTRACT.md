@@ -123,6 +123,18 @@ beendet vorzeitig.
 Bei `engine.feedback.value !== null` laeuft die Rueckmeldung, in dieser Zeit sind Eingaben
 gesperrt.
 
+## Der Vertrag wird maschinell geprueft
+
+`app/games/contract.test.ts` liest den Quelltext jedes registrierten Spiels und setzt die Regeln
+oben durch: keine Kommentare, kein `ß` in einem Text den jemand liest, keine Gedankenstriche in
+Zeichenketten, keine Unreinheit im Generator, genau eine Statusmeldung, eine Repeat-Sperre sobald
+ein eigener `keydown`-Listener existiert, keine Importe aus fremden Spielordnern, ein Aufruf des
+geteilten Generator-Contracts in den Tests, und alle vier Dateien vorhanden.
+
+Die `ß`-Regel gilt ausdruecklich nur fuer **Zeichenketten**, nicht fuer Zeichenklassen in
+regulaeren Ausdruecken. `wortfluss` muss «Straße» als Eingabe annehmen duerfen; die Schweizer
+Schreibweise gilt fuer das, was die App ausgibt, nicht fuer das, was man tippen darf.
+
 ## Tests
 
 `generator.test.ts` ruft immer den geteilten Contract auf:
