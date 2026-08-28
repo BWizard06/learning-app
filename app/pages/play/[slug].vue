@@ -4,6 +4,8 @@ import { CONSTRUCT_LABELS, type SessionPayload } from '~~/shared/types'
 import type { GameFinishPayload } from '~/composables/useGameSession'
 import { gameBySlug } from '~/games'
 import { playComponentLoader } from '~/games/registry'
+import { useSyncStore } from '~/stores/sync'
+import { noteFromThresholds } from '~~/shared/scoring'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
@@ -61,8 +63,9 @@ async function onFinish(payload: GameFinishPayload) {
   writeDifficulty(slug.value, payload.difficulty)
 
   const startedAt = Date.now() - Math.round(payload.durationS * 1000)
+  sessionId.value = newSessionId()
   const session: SessionPayload = {
-    id: newSessionId(),
+    id: sessionId.value,
     gameSlug: slug.value,
     startedAt,
     finishedAt: Date.now(),
@@ -76,7 +79,7 @@ async function onFinish(payload: GameFinishPayload) {
     metrics: payload.metrics,
     trials: payload.trials,
   }
-  await submit(session)
+  await sync.submit(session)
 }
 
 const accuracyText = computed(() =>
@@ -118,7 +121,10 @@ const accuracyText = computed(() =>
 
   <div v-else class="shell result">
     <p class="eyebrow">{{ definition!.name }}</p>
-    <ScoreBand :note="note?.value ?? null" :source="note?.source ?? 'thresholds'" label="Note" />
+    <ScoreBand :note="shownNote" :source="noteSource" label="Note" />
+    <p v-if="noteProvisional" class="result__provisional">
+      Vorläufige Note aus den Startschwellen, noch nicht übertragen.
+    </p>
 
     <dl class="card result__facts">
       <div>
@@ -139,12 +145,7 @@ const accuracyText = computed(() =>
       </div>
     </dl>
 
-    <p v-if="state === 'pending'" class="result__sync">
-      Ergebnis noch nicht gespeichert. {{ error }}
-    </p>
-    <p v-else-if="state === 'expired'" class="result__sync">
-      Sitzung abgelaufen. Seite neu laden und anmelden, dann wird nachgetragen.
-    </p>
+    <SyncBanner />
 
     <div class="result__actions">
       <button type="button" class="result__again tap" @click="begin">Nochmal</button>
@@ -231,6 +232,12 @@ const accuracyText = computed(() =>
   text-align: center;
   color: var(--muted);
   text-decoration: none;
+}
+
+.result__provisional {
+  margin-top: -0.5rem;
+  font-size: 0.75rem;
+  color: var(--faint);
 }
 
 .result__sync {
