@@ -5,6 +5,7 @@ import type { Note, SessionPayload } from '../../shared/types'
 import { gameBySlug } from '../../app/games/index'
 import { sessions, trials } from '../db/schema'
 import { recomputeDay } from './daylog'
+import { writeDifficulty } from './settings'
 import type { Db } from './types'
 
 export interface SaveResult {
@@ -100,6 +101,7 @@ export function saveSession(db: Db, payload: SessionPayload): SaveResult {
       }
     }
 
+    writeDifficulty(tx as unknown as Db, payload.gameSlug, payload.difficulty)
     recomputeDay(tx as unknown as Db, localDate(payload.startedAt))
 
     return { created: true, note }

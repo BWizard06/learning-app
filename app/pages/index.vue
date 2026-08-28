@@ -19,7 +19,10 @@ const grouped = computed(() =>
     <header class="home__head">
       <p class="eyebrow">Kognitives Training</p>
       <h1 class="home__title">Was übst du heute?</h1>
-      <NuxtLink to="/stats" class="home__stats tap">Statistik</NuxtLink>
+      <nav class="home__nav">
+        <NuxtLink to="/plan" class="home__link home__link--primary tap">Tagesplan</NuxtLink>
+        <NuxtLink to="/stats" class="home__link tap">Statistik</NuxtLink>
+      </nav>
     </header>
 
     <section v-for="group in grouped" :key="group.construct" class="home__group">
@@ -56,16 +59,27 @@ const grouped = computed(() =>
   font-size: 1.75rem;
 }
 
-.home__stats {
+.home__nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.home__link {
   display: inline-flex;
   align-items: center;
-  margin-top: 0.5rem;
   padding: 0.5rem 0.875rem;
   font-size: 0.875rem;
   color: var(--ink);
   text-decoration: none;
   border: 1px solid var(--rule);
   border-radius: var(--radius-key);
+}
+
+.home__link--primary {
+  color: var(--accent-ink);
+  background-color: var(--accent);
+  border-color: var(--accent);
 }
 
 .home__group {

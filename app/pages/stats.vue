@@ -27,6 +27,19 @@ function noteText(note: number | null): string {
   return note === null ? '—' : note.toFixed(1).replace('.', ',')
 }
 
+function msText(ms: number | null): string {
+  if (ms === null) return '—'
+  return ms >= 1000 ? `${(ms / 1000).toFixed(1).replace('.', ',')} s` : `${ms} ms`
+}
+
+function percentText(value: number): string {
+  return `${Math.round(value * 100)} %`
+}
+
+function hourText(hour: number): string {
+  return `${String(hour).padStart(2, '0')}:00`
+}
+
 function trendOf(entry: { note: number | null; previousNote: number | null }): string {
   if (entry.note === null || entry.previousNote === null) return ''
   const delta = entry.note - entry.previousNote
@@ -102,6 +115,64 @@ function trendOf(entry: { note: number | null; previousNote: number | null }): s
             </template>
           </p>
         </article>
+      </section>
+
+      <section v-if="data.weaknesses.length" class="stats__section">
+        <h2 class="stats__heading">Schwachstellen</h2>
+        <ul class="card stats__weak">
+          <li v-for="row in data.weaknesses.slice(0, 8)" :key="`${row.gameSlug}-${row.itemType}`" class="stats__weak-row">
+            <span class="stats__weak-type">{{ row.itemType }}</span>
+            <span class="stats__weak-game">{{ row.gameName }}</span>
+            <span class="num stats__weak-acc">{{ percentText(row.accuracy) }}</span>
+            <span class="num stats__weak-rt">{{ msText(row.meanRtMs) }}</span>
+            <span class="num stats__weak-n">{{ row.trials }}×</span>
+          </li>
+        </ul>
+        <p class="stats__caption stats__caption--left">
+          Sortiert nach Handlungsbedarf aus Trefferquote und mittlerer Reaktionszeit. Erst ab zwölf
+          Aufgaben eines Typs.
+        </p>
+      </section>
+
+      <section v-if="data.reaction" class="stats__section">
+        <h2 class="stats__heading">Reaktionszeit</h2>
+        <div class="card stats__reaction">
+          <div>
+            <p class="stats__label">Median</p>
+            <p class="num stats__value">{{ msText(data.reaction.medianMs) }}</p>
+          </div>
+          <div>
+            <p class="stats__label">Streuung</p>
+            <p class="num stats__value">{{ msText(data.reaction.spreadMs) }}</p>
+            <p class="stats__sub">mittlere Hälfte</p>
+          </div>
+          <div>
+            <p class="stats__label">Konstanz</p>
+            <p class="num stats__value">{{ data.reaction.variation.toFixed(2).replace('.', ',') }}</p>
+            <p class="stats__sub">kleiner ist stetiger</p>
+          </div>
+        </div>
+      </section>
+
+      <section v-if="data.hours.length > 1" class="stats__section">
+        <h2 class="stats__heading">Nach Uhrzeit</h2>
+        <ul class="card stats__hours">
+          <li v-for="row in data.hours" :key="row.hour" class="stats__hour">
+            <span class="num stats__hour-time">{{ hourText(row.hour) }}</span>
+            <span class="stats__hour-bar">
+              <span
+                class="stats__hour-fill"
+                :style="{ width: `${row.meanNote ? ((Math.min(6, Math.max(1, row.meanNote)) - 1) / 5) * 100 : 0}%` }"
+              />
+            </span>
+            <span class="num stats__hour-note">{{ noteText(row.meanNote) }}</span>
+            <span class="num stats__hour-count">{{ row.sessions }}×</span>
+          </li>
+        </ul>
+        <p class="stats__caption stats__caption--left">
+          Die echte Prüfung beginnt um 17:30. Wenn deine Leistung abends abfällt, ist das der Grund,
+          abends zu üben.
+        </p>
       </section>
 
       <section v-if="data.weekly.length" class="stats__section">
@@ -214,6 +285,105 @@ function trendOf(entry: { note: number | null; previousNote: number | null }): s
   margin-top: 0.75rem;
   font-size: 0.75rem;
   text-align: center;
+  color: var(--faint);
+}
+
+.stats__caption--left {
+  margin-top: 0.25rem;
+  text-align: left;
+  line-height: 1.45;
+}
+
+.stats__weak,
+.stats__hours {
+  margin: 0;
+  padding: 0.375rem 1rem;
+  list-style: none;
+}
+
+.stats__weak-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  grid-template-areas:
+    'type acc rt'
+    'game n n';
+  gap: 0.125rem 0.625rem;
+  padding-block: 0.625rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.stats__weak-row:last-child {
+  border-bottom: 0;
+}
+
+.stats__weak-type {
+  grid-area: type;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.stats__weak-game {
+  grid-area: game;
+  font-size: 0.75rem;
+  color: var(--faint);
+}
+
+.stats__weak-acc {
+  grid-area: acc;
+  font-weight: 600;
+}
+
+.stats__weak-rt {
+  grid-area: rt;
+  min-width: 3.5rem;
+  text-align: right;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.stats__weak-n {
+  grid-area: n;
+  font-size: 0.75rem;
+  text-align: right;
+  color: var(--faint);
+}
+
+.stats__reaction {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.stats__hour {
+  display: grid;
+  grid-template-columns: 3rem 1fr 2.5rem 2rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.4375rem;
+  font-size: 0.8125rem;
+}
+
+.stats__hour-bar {
+  height: 0.5rem;
+  background-color: var(--sunken);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.stats__hour-fill {
+  display: block;
+  height: 100%;
+  background-color: var(--accent);
+}
+
+.stats__hour-note {
+  text-align: right;
+  font-weight: 600;
+}
+
+.stats__hour-count {
+  text-align: right;
   color: var(--faint);
 }
 

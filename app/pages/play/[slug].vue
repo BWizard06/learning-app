@@ -95,6 +95,7 @@ async function onFinish(payload: GameFinishPayload) {
     trials: payload.trials,
   }
   await sync.submit(session)
+  await $fetch('/api/plan', { method: 'POST', body: { slug: slug.value } }).catch(() => {})
 }
 
 const ready = ref(false)
