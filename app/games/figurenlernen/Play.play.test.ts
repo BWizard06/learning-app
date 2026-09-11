@@ -42,13 +42,14 @@ describe('figurenlernen play surface', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.findAll('[role="status"]')).toHaveLength(1)
-    expect(wrapper.find('[role="status"]').text()).toContain('Figur 1 von 3')
+    expect(wrapper.find('[role="status"]').text()).toBe('Figur 1 von 3')
+    expect(wrapper.find('.run__uhr').text()).toBe('15 s')
     expect(wrapper.findAll('.run__punkt')).toHaveLength(3)
     expect(wrapper.html()).toContain('<svg')
     expect(wrapper.findAll('button.choice')).toHaveLength(0)
 
     await vorspulen(wrapper, LERNZEIT_MS / 3)
-    expect(wrapper.find('[role="status"]').text()).toContain('Figur 2 von 3')
+    expect(wrapper.find('[role="status"]').text()).toBe('Figur 2 von 3')
 
     wrapper.unmount()
   })
@@ -61,7 +62,7 @@ describe('figurenlernen play surface', () => {
 
     await vorspulen(wrapper, LERNZEIT_MS)
     expect(wrapper.html()).toContain('Zwischenrechnen')
-    expect(wrapper.find('[role="status"]').text()).toContain('20 Sekunden')
+    expect(wrapper.find('.run__uhr').text()).toBe('20 s')
     expect(wrapper.findAll('button.choice')).toHaveLength(3)
     expect(wrapper.html()).toContain(satz.payload.ablenkung[0]!.text)
 
@@ -99,12 +100,14 @@ describe('figurenlernen play surface', () => {
     const payload = (events![0] as unknown[])[0] as {
       rawScore: number
       accuracy: number
+      difficulty: number
       metrics: Record<string, number>
       trials: unknown[]
     }
 
     expect(payload.trials).toHaveLength(6)
     expect(payload.rawScore).toBe(1)
+    expect(payload.difficulty).toBe(2)
     expect(payload.accuracy).toBe(1)
     expect(payload.metrics.treffer).toBe(3)
     expect(payload.metrics.falscheAlarme).toBe(0)
@@ -136,11 +139,16 @@ describe('figurenlernen play surface', () => {
     }
 
     const events = wrapper.emitted('finish')
-    const payload = (events![0] as unknown[])[0] as { rawScore: number; metrics: Record<string, number> }
+    const payload = (events![0] as unknown[])[0] as {
+      rawScore: number
+      difficulty: number
+      metrics: Record<string, number>
+    }
 
     expect(payload.metrics.treffer).toBe(3)
     expect(payload.metrics.falscheAlarme).toBe(3)
     expect(payload.rawScore).toBe(0)
+    expect(payload.difficulty).toBe(1)
 
     wrapper.unmount()
   })

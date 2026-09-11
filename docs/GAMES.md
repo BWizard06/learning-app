@@ -485,3 +485,74 @@ falsche Merkmal oder in die falsche Richtung anzuwenden. Alle sechs Optionen mü
 als Merkmalsvektor als auch als gerendertes SVG unterscheiden; die zweite Bedingung ist die
 wichtigere, weil zwei verschiedene Vektoren sonst gleich aussehen könnten und die Aufgabe zwei
 richtige Antworten hätte.
+
+---
+
+## figurenlernen, Figuren lernen
+
+**Konstrukt** Gedächtnis
+**Modus** `block`, `itemCount: 1`, denn ein ganzer Durchgang ist genau ein Item
+**Schwierigkeit** 1 bis 5
+**Gewicht** linear von 1.0 auf 2.0
+**Schwellen** `raw1: 0.3`, `raw4: 0.62`, `raw6: 0.9`
+
+**Aufgabenformat** drei Phasen in einem einzigen Durchgang.
+
+1. **Lernen.** Drei bis acht erzeugte abstrakte Figuren, eine nach der anderen. In jeder Figur ist
+   genau ein kleiner Bereich gestrichelt markiert, dort steht das zu merkende Detail. Die ganze
+   Lernphase dauert je nach Stufe 15 bis 25 Sekunden, aufgeteilt in gleich lange Fenster pro Figur.
+2. **Ablenkung.** 20 Sekunden einfaches Kopfrechnen mit drei Antwortzahlen pro Aufgabe. Die
+   Rechnungen werden nicht gewertet, sie sollen nur die Figuren aus dem Arbeitsgedächtnis
+   verdrängen. Die Idee stammt aus `kopfrechnen`, der Code nicht.
+3. **Wiedererkennen.** Die Ausschnitte kommen einzeln, für jeden entscheidet man «Gesehen» oder
+   «Neu». Genau die Hälfte stammt aus dem Lernsatz, die andere Hälfte ist neu.
+
+**Engine-Form** `generate()` liefert einen `TrialBlock`. Sein `payload` trägt den Lernsatz, die
+Ablenkaufgaben und die Zeiten, seine `trials` sind die einzelnen Wiedererkennungsentscheide.
+`Play.vue` steuert die drei Phasen selbst, startet die Engine erst nach der Ablenkung und schickt
+pro Ausschnitt eine Antwort. Damit die Engine nicht schon nach dem ersten Entscheid abbricht,
+übergibt `Play.vue` der Engine die Anzahl Ausschnitte als `itemCount`; in der Definition bleibt
+`itemCount: 1`, weil ein Durchgang ein Item ist.
+
+**Die Figuren sind erzeugt, nicht gezeichnet.** Eine Figur besteht aus einer unregelmässigen
+Kontur mit acht Ecken, einem Element in der Mitte, kurzen Speichen mit einfachen Formen an drei
+Plätzen und dem markierten Detail am vierten Platz. Das Detail selbst ist ein Merkmalsvektor aus
+fünf Achsen: Armanordnung (4), Drehung (4), Endknoten (3), Bogen (2) und Kern (2), zusammen 192
+unterscheidbare Formen. Ein Test rendert alle 192 und prüft, dass keine zwei gleich aussehen.
+
+**Die markierte Region bleibt frei.** Die Konturradien liegen bei mindestens 48, die vier Plätze
+auf Radius 26, die Region hat Radius 15. Damit hält jede Kontur, jede Speiche und jede
+Nachbarform Abstand zur Region, der Ausschnitt zeigt also wirklich nur das gelernte Detail. Ein
+Test tastet die Konturkanten punktweise ab und rechnet den kleinsten Abstand unabhängig nach.
+
+**Schwierigkeitsachse** zwei Dinge zugleich: die Anzahl Figuren (3, 4, 5, 6, 8) und die
+Ähnlichkeit der neuen Ausschnitte. Ein Ablenker darf höchstens 3, 3, 2, 2 beziehungsweise 1
+Merkmal vom nächstgelegenen gelernten Detail abweichen. Auf Stufe 5 unterscheidet sich also jeder
+falsche Ausschnitt nur noch in einem einzigen Merkmal.
+
+**Rohwert, Abweichung von der Hausformel.** `raw` ist hier **kein Durchsatz pro Minute**, sondern
+ein Anteil:
+
+```
+raw = (Treffer - falsche Alarme) / Anzahl Ziele, begrenzt auf 0 bis 1
+```
+
+Das ist die korrigierte Wiedererkennungsrate. Wer alles mit «Gesehen» beantwortet, kommt so auf
+0, nicht auf 50 Prozent. Die Dauer geht bewusst nicht ein, weil die Lernzeit fest vorgegeben ist
+und ein schnelleres Antworten keine bessere Gedächtnisleistung bedeutet.
+
+**Stufenwechsel.** Ein Durchgang besteht aus einem einzigen Block, darum kann der Mittelwert der
+Item-Schwierigkeiten über die Sessions hinweg nicht steigen. Das Spiel meldet deshalb im
+Abschluss die Stufe für den nächsten Durchgang: ab einer korrigierten Rate von 0.85 eine Stufe
+hoch, ab 0.55 abwärts eine Stufe runter, dazwischen bleibt es bei der gespielten Stufe. Die
+tatsächlich gespielte Stufe steht weiterhin in jedem Trial und in `metrics.anzahlFiguren`.
+
+**Kennwerte:** `treffer`, `falscheAlarme`, `korrigierteRate`, `lernzeitMs`, `anzahlFiguren`.
+
+**Getestet** über den geteilten Contract plus eigene Property-Tests: genau die Hälfte der
+Ausschnitte sind Ziele, jeder Zielausschnitt steckt in einer gelernten Figur und kein Ablenker,
+kein Ausschnitt kommt zweimal, der Lernsatz enthält keine zwei gleichen Figuren, Anzahl Figuren
+und Lernzeit folgen einer von Hand geschriebenen Tabelle, der Abstand jedes Ablenkers wird
+unabhängig nachgezählt, die Zwischenrechnung wird durch wiederholtes Addieren nachgerechnet, und
+die Punkteberechnung wird an von Hand geschriebenen Trials geprüft. Dazu kommt `Play.play.test.ts`
+unter happy-dom für den Ablauf der drei Phasen.

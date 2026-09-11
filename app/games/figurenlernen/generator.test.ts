@@ -15,6 +15,7 @@ import {
   ZIEL,
   figureToSvg,
   generateFigurenBlock,
+  naechsteStufe,
   schnittToSvg,
   type AblenkArt,
   type DetailSpec,
@@ -233,6 +234,40 @@ describe('figurenlernen generator', () => {
     expect(mittel(5)).toBe(1)
     expect(mittel(1)).toBeGreaterThan(mittel(3))
     expect(mittel(3)).toBeGreaterThan(mittel(5))
+  })
+
+  it('empfiehlt nach dem Durchgang eine Stufe fuer das naechste Mal', () => {
+    const faelle: [number, number, number][] = [
+      [1, 1, 2],
+      [1, 0.9, 2],
+      [1, 0.85, 2],
+      [1, 0.84, 1],
+      [1, 0.6, 1],
+      [1, 0.55, 1],
+      [1, 0, 1],
+      [3, 1, 4],
+      [3, 0.7, 3],
+      [3, 0.56, 3],
+      [3, 0.55, 2],
+      [3, 0, 2],
+      [5, 1, 5],
+      [5, 0.7, 5],
+      [5, 0.4, 4],
+    ]
+    for (const [stufe, rate, erwartet] of faelle) {
+      expect(naechsteStufe(stufe, rate), `Stufe ${stufe} mit Rate ${rate}`).toBe(erwartet)
+    }
+  })
+
+  it('erreicht mit guten Durchgaengen jede vorgesehene Figurenzahl', () => {
+    const gesehen = new Set<number>()
+    let stufe = 1
+    for (let i = 0; i < 12; i++) {
+      gesehen.add(generateFigurenBlock(stufe, createRng(i + 1)).payload.figuren.length)
+      stufe = naechsteStufe(stufe, 0.95)
+    }
+    expect([...gesehen].sort((a, b) => a - b)).toEqual([3, 4, 5, 6, 8])
+    expect(stufe).toBe(5)
   })
 
   it('erreicht beide Aufgabenarten schon auf der untersten Stufe', () => {

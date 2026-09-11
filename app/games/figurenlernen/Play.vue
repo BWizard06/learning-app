@@ -4,13 +4,20 @@ import { createRng } from '~~/shared/rng'
 import type { ChoiceOption } from '~~/shared/types'
 import type { GameFinishPayload } from '~/composables/useGameSession'
 import type { AblenkAufgabe, SchnittPayload } from './generator'
-import { clampDifficulty, figureToSvg, generateFigurenBlock, schnittToSvg } from './generator'
+import {
+  clampDifficulty,
+  figureToSvg,
+  generateFigurenBlock,
+  naechsteStufe,
+  schnittToSvg,
+} from './generator'
 import definition from './definition'
 
 const props = defineProps<{ seed: number; difficulty: number; durationS?: number }>()
 const emit = defineEmits<{ finish: [GameFinishPayload] }>()
 
-const satz = generateFigurenBlock(clampDifficulty(props.difficulty), createRng(props.seed))
+const stufe = clampDifficulty(props.difficulty)
+const satz = generateFigurenBlock(stufe, createRng(props.seed))
 const lernstoff = satz.payload
 const figurenSvg = lernstoff.figuren.map((figur) => figureToSvg(figur))
 
@@ -23,7 +30,9 @@ const engine = useEngine({
 })
 const { current, feedback } = engine
 
-useGameSession(engine, (payload) => emit('finish', payload))
+useGameSession(engine, (payload) =>
+  emit('finish', { ...payload, difficulty: naechsteStufe(stufe, payload.rawScore) }),
+)
 
 const TICK_MS = 100
 
@@ -70,9 +79,9 @@ const eyebrow = computed(() => {
 
 const statusText = computed(() => {
   if (phase.value === 'lernen') {
-    return `Figur ${figurIndex.value + 1} von ${lernstoff.figuren.length}, noch ${sekunden.value} Sekunden`
+    return `Figur ${figurIndex.value + 1} von ${lernstoff.figuren.length}`
   }
-  if (phase.value === 'ablenkung') return `Noch ${sekunden.value} Sekunden`
+  if (phase.value === 'ablenkung') return 'Rechnen, bis die Zeit um ist'
   if (feedback.value?.correct === true) return '✓ richtig'
   if (feedback.value) {
     return feedback.value.expected === true
@@ -128,7 +137,10 @@ onBeforeUnmount(() => {
 <template>
   <GameFrame :engine="engine">
     <div class="run">
-      <p class="eyebrow run__eyebrow">{{ eyebrow }}</p>
+      <div class="run__kopf">
+        <p class="eyebrow">{{ eyebrow }}</p>
+        <span v-if="phase !== 'erkennen'" class="num run__uhr" aria-hidden="true">{{ sekunden }} s</span>
+      </div>
 
       <div class="run__stage card">
         <div
@@ -182,8 +194,18 @@ onBeforeUnmount(() => {
   flex-direction: column;
 }
 
-.run__eyebrow {
+.run__kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   padding-block: 0.25rem 0.75rem;
+}
+
+.run__uhr {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .run__stage {

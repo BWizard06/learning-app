@@ -111,6 +111,16 @@ export function figurenCountFor(difficulty: number): number {
   return FIGUREN_COUNTS[level(difficulty)]!
 }
 
+export const AUFSTIEG_AB = 0.85
+export const ABSTIEG_AB = 0.55
+
+export function naechsteStufe(difficulty: number, rate: number): number {
+  const stufe = Math.round(clampDifficulty(difficulty))
+  if (rate >= AUFSTIEG_AB) return Math.min(DIFFICULTY_MAX, stufe + 1)
+  if (rate <= ABSTIEG_AB) return Math.max(DIFFICULTY_MIN, stufe - 1)
+  return stufe
+}
+
 export function lernzeitMsFor(difficulty: number): number {
   return LERNZEIT_MS[level(difficulty)]!
 }
