@@ -83,13 +83,7 @@ cp src/deploy/compose.yaml ./compose.yaml
 mkdir -p data
 ```
 
-In `compose.yaml` steht `context: .`; zeige es auf den geklonten Code:
-
-```yaml
-    build:
-      context: ./src
-      dockerfile: Dockerfile
-```
+Die Datei zeigt bereits mit `context: ./src` auf den geklonten Code, du musst nichts anpassen.
 
 Pruefe die drei Dinge, die sonst still fehlschlagen:
 

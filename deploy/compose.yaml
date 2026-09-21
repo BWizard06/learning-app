@@ -1,7 +1,7 @@
 services:
   learning-app:
     build:
-      context: .
+      context: ./src
       dockerfile: Dockerfile
     image: learning-app:0.1.0
     container_name: learning-app
