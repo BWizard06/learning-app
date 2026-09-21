@@ -1,4 +1,3 @@
-import { writeFileSync } from 'node:fs'
 import { afterEach, describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { useEngine } from '~~/app/composables/useEngine'
@@ -116,33 +115,8 @@ describe('gonogo play surface', () => {
     const gaps: number[] = payload.trials.map((trial: any) => trial.rtMs)
     const worst = Math.max(...gaps)
     const best = Math.min(...gaps)
-    writeFileSync(
-      '/private/tmp/claude-501/-Users-benbrandle-Desktop-projects/a747b156-029b-44b8-9a33-8da7b877c2d6/scratchpad/timing.json',
-      JSON.stringify({ gaps, best, worst, drift: gaps.map((g: number) => g - 900) }, null, 2),
-    )
     expect(best).toBeGreaterThanOrEqual(880)
     expect(worst).toBeLessThanOrEqual(960)
-    wrapper.unmount()
-  })
-
-  it('dumps the rendered markup for a visual check', async () => {
-    const wrapper = mount(Play, {
-      props: { seed: 7, difficulty: 1, durationS: 30 },
-      global: { stubs },
-      attachTo: document.body,
-    })
-    await wrapper.vm.$nextTick()
-
-    const live = wrapper.html()
-    await wait(1400)
-    await wrapper.vm.$nextTick()
-    const afterFeedback = wrapper.html()
-
-    writeFileSync(
-      '/private/tmp/claude-501/-Users-benbrandle-Desktop-projects/a747b156-029b-44b8-9a33-8da7b877c2d6/scratchpad/render.json',
-      JSON.stringify({ live, afterFeedback }, null, 2),
-    )
-    expect(live).toContain('stage__glyph')
     wrapper.unmount()
   })
 })
