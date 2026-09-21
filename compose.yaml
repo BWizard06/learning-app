@@ -1,0 +1,12 @@
+services:
+  learning-app:
+    build: .
+    image: learning-app
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    volumes:
+      - learning-data:/data
+
+volumes:
+  learning-data:

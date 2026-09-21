@@ -33,7 +33,7 @@ describe('isExpectedBody', () => {
 })
 
 describe('classifyResponse, the rule that protects results', () => {
-  it('keeps the entry when Authelia answers 401', () => {
+  it('keeps the entry when the auth proxy answers 401', () => {
     const verdict = classifyResponse(res(401), null, ID)
     expect(verdict.outcome).toBe('unauthenticated')
     expect(verdict.removeFromOutbox).toBe(false)
